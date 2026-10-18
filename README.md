@@ -84,11 +84,11 @@ cd backend && uv run python scripts/list_models.py
 
 ### Deploy on Nebius AI Cloud
 
-Minimum: one CPU VM + Docker Compose (Token Factory still serves Nemotron). See [deploy/nebius/README.md](deploy/nebius/README.md).
+Preferred: **Serverless AI** endpoint with nginx (one HTTPS URL for UI + API). Token Factory still serves Nemotron. See [deploy/nebius/README.md](deploy/nebius/README.md).
 
 ```bash
-./deploy/nebius/create-vm.sh   # or: make nebius-create
-./deploy/nebius/deploy.sh      # or: make nebius-deploy
+./deploy/nebius/build-push.sh       # or: make nebius-build
+./deploy/nebius/deploy-endpoint.sh  # or: make nebius-endpoint
 ```
 
 ### Common tasks

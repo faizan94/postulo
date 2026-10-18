@@ -14,11 +14,11 @@ NETWORK_ID="$(cat "$STATE/network_id" 2>/dev/null || true)"
 
 [[ -n "$INSTANCE_ID" ]] || { echo "No instance id in $STATE/instance_id" >&2; exit 1; }
 
-echo "Deleting instance $INSTANCE_ID…"
+echo "Deleting instance ${INSTANCE_ID}..."
 nebius compute instance delete --id "$INSTANCE_ID" || true
 
 if [[ "${DESTROY_NETWORK:-0}" == "1" && -n "$NETWORK_ID" ]]; then
-  echo "Deleting subnet/network (DESTROY_NETWORK=1)…"
+  echo "Deleting subnet/network (DESTROY_NETWORK=1)..."
   [[ -n "$SUBNET_ID" ]] && nebius vpc subnet delete --id "$SUBNET_ID" || true
   nebius vpc network delete --id "$NETWORK_ID" || true
 fi

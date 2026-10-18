@@ -1,6 +1,7 @@
 // Base fetch wrapper: API URL, auth header, error normalisation, 401 handling.
 
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(
+// Empty string = same-origin (nginx on Nebius Serverless AI). Use ?? so "" is kept.
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
   /\/$/,
   "",
 );

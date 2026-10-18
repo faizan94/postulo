@@ -1,84 +1,54 @@
 # Deploy Postulo on Nebius AI Cloud
 
-Minimum setup: one **CPU** VM running the existing `docker compose` stack.
-Nemotron stays on **Token Factory** (no GPU on this VM).
+**Preferred:** one **Serverless AI** endpoint — nginx fronts FastAPI + Next.js behind a managed HTTPS URL. Nemotron stays on **Token Factory**.
 
 ```
-Browser → :3000 frontend → :8000 backend → Token Factory + Tavily
-                                 └── SQLite volume
+Browser ──HTTPS──► Nebius endpoint :8080 (nginx)
+                      ├─ /api,/health,/docs  → FastAPI :8000
+                      └─ /                   → Next.js :3000
+                                              └─ Token Factory + Tavily
 ```
 
 ## Prerequisites
 
-1. **Nebius CLI** ([install docs](https://docs.nebius.com/cli/install)):
+1. Nebius CLI installed and logged in ([install](https://docs.nebius.com/cli/install))
+2. Docker Desktop running (builds `linux/amd64` images)
+3. `jq`
+4. Repo-root `.env` with `NEBIUS_API_KEY` and `TAVILY_API_KEY`
+5. Local config: `deploy/nebius/.env.nebius` (see `env.example`)
 
-   ```bash
-   curl -sSL https://artifacts.nebius.cloud/cli/install.sh | bash
-   exec -l $SHELL
-   nebius version
-   ```
+## Deploy (Serverless AI + nginx)
 
-   Then create a profile (project ID from the Nebius console → project):
+```bash
+./deploy/nebius/build-push.sh      # build + push to Nebius Container Registry
+./deploy/nebius/deploy-endpoint.sh # create/replace Serverless AI endpoint
+```
 
-   ```bash
-   export PROJECT_ID=<your_project_id>
-   nebius profile create \
-     --profile postulo \
-     --endpoint api.nebius.cloud \
-     --federation-endpoint auth.nebius.com \
-     --parent-id "$PROJECT_ID"
-   # complete browser login, then:
-   nebius iam whoami
-   ```
+Or: `make nebius-build` then `make nebius-endpoint`.
 
-2. `jq`, `rsync`, `ssh`
-3. An SSH key pair (`~/.ssh/id_ed25519.pub` or `id_rsa.pub`)
-4. Repo-root `.env` with `NEBIUS_API_KEY` and `TAVILY_API_KEY` filled in
+The script prints the managed URL, e.g. `https://….ai.nebiususercontent.com`.
 
-Optional: copy `env.example` → `.env.nebius` to override VM size / name.
+```bash
+# logs / tear down
+nebius ai endpoint logs "$(cat deploy/nebius/.state/endpoint_id)"
+./deploy/nebius/destroy-endpoint.sh
+```
 
-If `vpc network create` returns **PermissionDenied**, set `SUBNET_ID` to the
-project’s existing default subnet (console → VPC, or
-`nebius vpc subnet list --parent-id "$PROJECT_ID"`) instead of creating a new network.
+### Notes
 
-## One-time: create the VM
+- Endpoint auth is `--auth none`; the app keeps its own login token.
+- Frontend is built with empty `NEXT_PUBLIC_API_URL` so the browser calls same-origin `/api/…` through nginx.
+- SQLite is ephemeral on the endpoint disk (fine for a demo). Restart/replace clears it.
+- Updating the app: re-run `build-push.sh` then `deploy-endpoint.sh` (recreates the endpoint).
+
+## Alternative: CPU VM + docker compose
+
+Still available if you need a long-lived SSH box:
 
 ```bash
 ./deploy/nebius/create-vm.sh
-```
-
-Creates a `cpu-d3` / `2vcpu-8gb` Ubuntu VM, installs Docker via cloud-init, and writes
-connection details under `deploy/nebius/.state/` (gitignored).
-
-## Deploy / update the app
-
-```bash
 ./deploy/nebius/deploy.sh
-```
-
-Syncs the repo to `/opt/postulo`, uploads a server `.env` with:
-
-- `MOCK_MODE=false`
-- `CORS_ORIGINS=http://<public-ip>:3000`
-- `NEXT_PUBLIC_API_URL=http://<public-ip>:8000`
-
-then builds and starts compose.
-
-Open:
-
-- UI: `http://<public-ip>:3000`
-- API: `http://<public-ip>:8000/docs`
-
-## Tear down
-
-```bash
 ./deploy/nebius/destroy.sh
-# also delete the VPC created by create-vm.sh:
-DESTROY_NETWORK=1 ./deploy/nebius/destroy.sh
 ```
 
-## Notes
-
-- Rebuild after changing the public IP or `NEXT_PUBLIC_*` (values are baked at frontend build time).
-- SQLite lives in the `postulo-data` Docker volume — fine for a demo, not for multi-replica.
-- Ports 3000/8000 are exposed on the public IP; add TLS/reverse proxy before sharing widely.
+If `vpc network create` is denied, set `SUBNET_ID` to the project default subnet in `.env.nebius`.
