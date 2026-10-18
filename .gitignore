@@ -23,6 +23,14 @@ npm-debug.log*
 # Pipeline outputs (CLI runs, cached demo results)
 output/
 
+# Local databases: hold users' CV text and searches. Never commit.
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
 # OS / editors
 .DS_Store
 Thumbs.db
