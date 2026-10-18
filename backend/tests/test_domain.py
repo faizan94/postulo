@@ -154,6 +154,33 @@ def test_match_statuses():
     }
 
 
+def test_match_phrase_requirements_use_glossary_skills_inside():
+    # LLM requirement names are often phrases; the skill inside the phrase decides.
+    prof = _profile("Python", "PostgreSQL")
+    out = {
+        m.requirement.name: m.status
+        for m in match(
+            prof,
+            [
+                _req("Fluency in Python"),
+                _req("Strong Python and software engineering skills"),
+                _req("Python and Kafka experience"),
+                _req("Production MySQL databases"),
+                _req("Experience with Kafka"),
+                _req("Evaluation discipline"),
+            ],
+        )
+    }
+    assert out == {
+        "Fluency in Python": "have",
+        "Strong Python and software engineering skills": "have",
+        "Python and Kafka experience": "related",
+        "Production MySQL databases": "related",
+        "Experience with Kafka": "missing_must",
+        "Evaluation discipline": "missing_must",
+    }
+
+
 def test_match_score_golden_and_gates():
     prof = _profile("Python", "SQL", years=2)
     reqs = [

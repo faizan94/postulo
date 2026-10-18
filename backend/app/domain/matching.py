@@ -2,8 +2,9 @@
 
 from app.domain.glossary import glossary
 from app.domain.rules import CEFR
+from app.schemas.common import Evidence
 from app.schemas.posting import Requirement, SkillMatch, SkillStatus
-from app.schemas.profile import Profile
+from app.schemas.profile import Profile, SkillItem
 
 
 def _level_ok(have: str | None, need: str | None) -> bool:
@@ -46,13 +47,35 @@ def match(profile: Profile, requirements: list[Requirement]) -> list[SkillMatch]
         elif g.key_of(req.name) in skills:
             status, evidence = "have", skills[g.key_of(req.name)].evidence
         else:
-            related = next(
-                (skills[g.key_of(n)] for n in g.related_to(req.name) if g.key_of(n) in skills),
-                None,
-            )
+            related = _related_skill(req.name, skills)
             if related is not None:
                 status, evidence = "related", related.evidence
             else:
-                status = _missing(req)
+                status, evidence = _by_phrase(req, skills)
         out.append(SkillMatch(requirement=req, status=status, cv_evidence=evidence))
     return out
+
+
+def _related_skill(name: str, skills: dict[str, SkillItem]) -> SkillItem | None:
+    g = glossary()
+    return next((skills[g.key_of(n)] for n in g.related_to(name) if g.key_of(n) in skills), None)
+
+
+def _by_phrase(
+    req: Requirement, skills: dict[str, SkillItem]
+) -> tuple[SkillStatus, Evidence | None]:
+    """Fallback for phrase-style names ("Fluency in Python", "LangChain or LangGraph"):
+    the glossary skills inside the name decide. All of them in the CV -> have; some of them
+    (or a related skill) -> close match; none -> missing."""
+    hits = [h.term.name for h in glossary().find(req.name) if h.term.kind != "language"]
+    have = [skills[k] for k in (glossary().key_of(n) for n in hits) if k in skills]
+    if hits and len(have) == len(hits):
+        return "have", have[0].evidence
+    close = (
+        have[0]
+        if have
+        else next((r for n in hits if (r := _related_skill(n, skills)) is not None), None)
+    )
+    if close is not None:
+        return "related", close.evidence
+    return _missing(req), None

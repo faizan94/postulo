@@ -8,9 +8,11 @@ import { api } from "@/lib/api";
 import type { CvDraft } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+// Images (photo or scan) are read by Nemotron vision on the backend (D19).
+const ACCEPT =
+  ".pdf,.docx,.png,.jpg,.jpeg,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,image/webp";
 
-/** Step 1: drop a PDF/.docx or paste text. Calls POST /api/cv and returns the draft. */
+/** Step 1: drop a PDF/.docx/image or paste text. Calls POST /api/cv and returns the draft. */
 export function CvUpload({ onDraft }: { onDraft: (d: CvDraft) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"file" | "paste">("file");
@@ -70,7 +72,7 @@ export function CvUpload({ onDraft }: { onDraft: (d: CvDraft) => void }) {
           <span className="font-medium text-zinc-900">
             {busy ? "Reading your CV…" : "Drop your CV here or click to choose"}
           </span>
-          <span className="text-sm text-zinc-500">PDF or Word (.docx), up to 10 MB</span>
+          <span className="text-sm text-zinc-500">PDF, Word (.docx) or a photo/scan (PNG, JPG), up to 10 MB</span>
           <input
             ref={input}
             type="file"
