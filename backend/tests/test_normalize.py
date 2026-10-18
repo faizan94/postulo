@@ -125,3 +125,32 @@ def test_typed_place_resolves_any_spelling():
     p = places()
     assert {p.resolve(x).name for x in ("münchen", "MUNICH", "Muenchen", "munchen")} == {"Munich"}
     assert p.search("koln")[0].name == "Cologne"
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        # real Nemotron names from a live run (search 8): never cut sentences into fragments
+        (
+            "Demonstrated experience designing, implementing, or securing AI/ML workloads "
+            "in cloud environments",
+            ["Machine Learning"],
+        ),
+        ("quality, pathways grounded in evidence, Evaluation", []),
+        (
+            "Hands-on proficiency with primary AI/ML platforms: Amazon Bedrock, Azure OpenAI",
+            ["Machine Learning", "Azure"],
+        ),
+        # real lists still split
+        ("Flyte, Ray", ["Flyte", "Ray"]),
+        (
+            "Machine learning, natural language processing, computer vision",
+            ["Machine Learning", "NLP", "Computer Vision"],
+        ),
+        ("Strong communication skills", ["Communication"]),
+    ],
+)
+def test_long_phrases_are_not_fragmented(name, expected):
+    names = [n for n, _ in canonical_names(name, "tech")]
+    assert names == expected
+    assert all(len(n.split()) <= 6 and len(n) <= 60 for n in names)

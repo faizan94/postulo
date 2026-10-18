@@ -1,0 +1,28 @@
+# Postulo reverse proxy. One origin for the browser:
+#   /api/*, /health, /docs, /openapi.json  -> backend:8000 (FastAPI)
+#   everything else                        -> frontend:3000 (Next.js)
+#
+# SITE_ADDRESS comes from the environment (deploy.sh writes it to .env):
+#   ":80"            -> plain HTTP on the public IP, no certificate
+#   "app.example.com" -> automatic HTTPS (Let's Encrypt). The DNS A record must point
+#                        at the VM and ports 80 and 443 must be reachable.
+
+{$SITE_ADDRESS} {
+	@backend path /api/* /health /docs /docs/* /openapi.json
+	handle @backend {
+		# The search stream is text/event-stream: flush every write, never buffer.
+		reverse_proxy backend:8000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		encode zstd gzip
+		reverse_proxy frontend:3000
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

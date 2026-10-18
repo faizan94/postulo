@@ -161,7 +161,11 @@ async def expand(
             if (
                 any(p.kind == "remote" for p in wanted)
                 and via_remote_only
-                and not remote_ok_for(loc, home_country)
+                and not remote_ok_for(
+                    JobLocation(f"{j.location_text} {j.title}", j.country_code, j.remote),
+                    home_country,
+                )
+                # titles often carry the restriction: "... (Anywhere in the U.S.)"
             ):
                 if was_found or kind == "exact":
                     dropped.append(

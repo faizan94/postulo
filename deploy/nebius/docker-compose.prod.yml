@@ -1,0 +1,45 @@
+# Production override for one Nebius VM. Use it on top of the base file:
+#   docker compose -f docker-compose.yml -f deploy/nebius/docker-compose.prod.yml up -d --build
+# Paths here are relative to the repo root (the folder of the first -f file).
+#
+# What it changes:
+#   - adds Caddy on ports 80/443 (the only public ports)
+#   - removes the public 8000/3000 host ports of backend and frontend (needs Compose 2.24.4+ for !reset)
+#   - requires NEXT_PUBLIC_API_URL (the public URL) for the frontend build
+services:
+  backend:
+    ports: !reset []
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      args:
+        # Inlined into the browser bundle at build time. Same origin as Caddy, e.g. http://203.0.113.10
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?set PUBLIC_URL and run deploy/nebius/deploy.sh}
+    ports: !reset []
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./deploy/nebius/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data       # TLS certificates (keep it, Let's Encrypt has rate limits)
+      - caddy-config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+
+volumes:
+  caddy-data:
+  caddy-config:

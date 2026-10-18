@@ -115,3 +115,12 @@ def test_remote_jobs_must_be_open_to_the_users_country():
     assert not ok("Senior AI Engineer - US, Remote") and not ok("Remote (Anywhere in the U.S.)")
     assert not ok("Remote - United States") and not ok("Remote - Canada")
     assert remote_ok_for(JobLocation("Remote - US", None, True), None)  # unknown home: keep
+
+
+def test_clean_text_strips_profile_links():
+    from app.services.intake.clean_text import clean
+
+    out = clean(
+        "Berlin | linkedin.com/in/some-person-123 | https://www.xing.com/profile/Some_Person"
+    )
+    assert "linkedin.com/in" not in out and "xing.com/profile" not in out and "Berlin" in out

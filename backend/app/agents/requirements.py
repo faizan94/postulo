@@ -18,7 +18,7 @@ from app.domain.rules import extract_requirements
 from app.schemas.common import Evidence
 from app.schemas.posting import Requirement
 
-EXTRACTION_VERSION = "v4"  # bump when extraction logic changes: old cache entries re-run
+EXTRACTION_VERSION = "v5"  # bump when extraction logic changes: old cache entries re-run
 RULES_MODEL = f"rules@{EXTRACTION_VERSION}"
 BATCH = 5
 MAX_TEXT_PER_POSTING = 8_000
@@ -47,28 +47,80 @@ def _known(part: str) -> tuple[str, str] | None:
     return term.name, "soft" if term.kind == "soft" else term.type
 
 
+MAX_PART_WORDS = 3  # a list item longer than this is a phrase, not a skill: don't split
+MAX_NAME_WORDS = 6  # a "name" longer than this is a description, not a skill name
+MAX_NAME_CHARS = 60
+
+
+def _is_name(part: str) -> bool:
+    """Short enough to be a skill name, or a known skill."""
+    return len(part.split()) <= MAX_PART_WORDS or _known(part) is not None
+
+
+def _split(text: str, pattern: re.Pattern[str]) -> list[str]:
+    """Split only when the pieces look like a list of skill names; otherwise keep it whole.
+
+    A list: every piece is a known skill or at most 3 words, and at least one piece is known
+    (or every piece is 1-2 words, like 'Flyte, Ray'). 'Python, SQL and dbt' -> 3 parts;
+    'Demonstrated experience designing, implementing, or securing ...' stays one piece.
+    """
+    parts = [p.strip() for p in pattern.split(text) if p.strip()]
+    if len(parts) < 2 or not all(_is_name(p) for p in parts):
+        return [text]
+    if any(_known(p) for p in parts) or all(len(p.split()) <= 2 for p in parts):
+        return parts
+    return [text]
+
+
+def _is_description(chunk: str) -> bool:
+    """Not a skill name: long, or a multi-word phrase with list punctuation."""
+    words = len(chunk.split())
+    return (
+        words > MAX_NAME_WORDS
+        or len(chunk) > MAX_NAME_CHARS
+        or (words > MAX_PART_WORDS and any(c in chunk for c in ",;:"))
+    )
+
+
+def _skills_inside(phrase: str) -> list[tuple[str, str]]:
+    """Known skills mentioned inside a long description ('...on AWS and Kubernetes')."""
+    out: list[tuple[str, str]] = []
+    for h in glossary().find(phrase):
+        k = (h.term.name, "soft" if h.term.kind == "soft" else h.term.type)
+        if k not in out:
+            out.append(k)
+    return out
+
+
 def canonical_names(name: str, req_type: str) -> list[tuple[str, str]]:
-    """Map an LLM requirement name to canonical names (D2, tokenized form).
+    """Map an LLM requirement name to canonical names (D2/D25, tokenized form).
 
     - any spelling of a known skill -> its canonical name ('REACT' -> React, 'Node JS' -> Node.js)
-    - "A, B and C" -> all of them; "A/B/C" or "A or B" -> the alternatives we know
+    - a short list "A, B and C" -> all of them; "A/B/C" or "A or B" -> the alternatives we know
       ('Airflow/Flyte/Ray' -> Apache Airflow)
-    - unknown names are kept as written (tidied), so nothing the posting asks is lost,
-      and longer names are not shortened ('React Native' stays React Native, not React).
+    - a long description is never cut into fragments: the known skills inside it are used,
+      and if there are none it is dropped (it's not a skill name; the quote stays in the post)
+    - short unknown names are kept as written ('Flyte', 'Vector databases'), and longer known
+      names are not shortened ('React Native' stays React Native).
     """
     if req_type == "degree":
         return [("Degree", "degree")]
     if req_type == "years":
         return [("Experience", "years")]
     clean = " ".join(_PAREN.sub(" ", name).split()) or " ".join(name.split())
-    whole = _known(clean)
-    if whole and glossary().term(clean) is not None:
-        return [whole]
+    if glossary().term(clean) is not None:
+        whole = _known(clean)
+        return [whole] if whole else []
     out: list[tuple[str, str]] = []
-    for chunk in (c for c in _AND.split(clean) if c.strip()):
-        alts = [a.strip() for a in _ALT.split(chunk) if a.strip()]
+    for chunk in _split(clean, _AND):
+        alts = _split(chunk, _ALT)
         known = [k for a in alts if (k := _known(a))]
-        picked = known if known else [(glossary().canonical(chunk)[:60], req_type)]
+        if known:
+            picked = known
+        elif _is_description(chunk):
+            picked = _skills_inside(chunk)
+        else:
+            picked = [(glossary().canonical(chunk), req_type)]
         out += [k for k in picked if k not in out]
     return out
 

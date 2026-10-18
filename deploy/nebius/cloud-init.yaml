@@ -1,0 +1,32 @@
+#cloud-config
+# Postulo VM bootstrap for Nebius AI Cloud (Ubuntu 24.04).
+# create-vm.sh replaces __SSH_USER__ and __SSH_PUBLIC_KEY__ before sending this file.
+# It installs Docker Engine + the compose plugin (official Docker apt repo) and git.
+# It does not open any port or change any firewall. Docker publishes only what
+# docker-compose.prod.yml asks for (Caddy on 80/443).
+
+users:
+  - name: __SSH_USER__
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - __SSH_PUBLIC_KEY__
+
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - git
+
+runcmd:
+  # Docker Engine from Docker's own apt repo (https://docs.docker.com/engine/install/ubuntu/)
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - sh -c 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" > /etc/apt/sources.list.d/docker.list'
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - systemctl enable --now docker
+  # Let the SSH user run docker without sudo (takes effect on the next login).
+  - usermod -aG docker __SSH_USER__
+  - touch /var/lib/postulo-bootstrap-done
