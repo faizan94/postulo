@@ -1,0 +1,54 @@
+"""Profile x requirements -> skill statuses, by code (G8). Deterministic, so D6 holds."""
+
+from app.domain.glossary import glossary
+from app.domain.rules import CEFR
+from app.schemas.posting import Requirement, SkillMatch, SkillStatus
+from app.schemas.profile import Profile
+
+
+def _level_ok(have: str | None, need: str | None) -> bool:
+    """Unknown levels pass (gates skip null inputs). 'native' beats everything."""
+    if need is None or have is None:
+        return True
+    try:
+        return CEFR.index(have) >= CEFR.index(need)
+    except ValueError:
+        return True
+
+
+def _missing(req: Requirement) -> SkillStatus:
+    # A missing soft "must" still shows as missing_nice (§7.1).
+    return "missing_must" if req.importance == "must" and req.type != "soft" else "missing_nice"
+
+
+def match(profile: Profile, requirements: list[Requirement]) -> list[SkillMatch]:
+    g = glossary()
+    skills = {s.name: s for s in profile.skills}
+    languages = {lang.name: lang for lang in profile.languages}
+    out: list[SkillMatch] = []
+    for req in requirements:
+        status: SkillStatus
+        evidence = None
+        if req.type == "language":
+            lang = languages.get(req.name)
+            if lang and _level_ok(lang.level, req.level):
+                status, evidence = "have", lang.evidence
+            else:
+                status = _missing(req)
+        elif req.type == "years":
+            years = profile.years_total
+            ok = years is None or req.min_years is None or years >= req.min_years
+            status = "have" if ok else _missing(req)
+        elif req.type == "degree":
+            status = "have" if profile.education else "missing_nice"
+            evidence = profile.education[0].evidence if profile.education else None
+        elif req.name in skills:
+            status, evidence = "have", skills[req.name].evidence
+        else:
+            related = next((skills[n] for n in g.related_to(req.name) if n in skills), None)
+            if related is not None:
+                status, evidence = "related", related.evidence
+            else:
+                status = _missing(req)
+        out.append(SkillMatch(requirement=req, status=status, cv_evidence=evidence))
+    return out

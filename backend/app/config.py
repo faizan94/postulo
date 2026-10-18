@@ -21,12 +21,12 @@ class Settings(BaseSettings):
     # --- Nebius Token Factory (OpenAI-compatible) ---
     nebius_api_key: str | None = None
     nebius_base_url: str = "https://api.tokenfactory.nebius.com/v1/"
-    # Main reasoning model (CV reading, scoring). Switch to the Nemotron 3.5 Super VL ID
-    # once `GET /v1/models` lists it (run `uv run python scripts/list_models.py`).
-    nemotron_model: str = "nvidia/nemotron-3-super-120b-a12b"
-    # Cheap/fast model for high-volume sub-agent steps. Defaults to the main model because it
-    # is the only ID confirmed on Token Factory; swap in Nemotron 3.5 Lightning 30B when listed.
-    nemotron_fast_model: str = "nvidia/nemotron-3-super-120b-a12b"
+    # IDs confirmed on Token Factory via `uv run python scripts/list_models.py` (18 Oct 2026).
+    # Main model: planning, CV profile. Fast model: requirements, related checks.
+    # Vision model: OCR of scanned CVs (stretch, see OCR_ENABLED).
+    nemotron_model: str = "nvidia/Nemotron-3.5-Super-VL"
+    nemotron_fast_model: str = "nvidia/Nemotron-3_5-Lightning"
+    nemotron_vision_model: str = "nvidia/Nemotron-3.5-Super-VL"
     llm_timeout_seconds: float = 120.0
     llm_max_tokens: int = 8000  # reasoning tokens count toward this, keep it generous
 
@@ -38,6 +38,19 @@ class Settings(BaseSettings):
     max_postings: int = Field(default=10, ge=1, le=20)
     cors_origins: str = "http://localhost:3000"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+
+    # --- Storage ---
+    # Relative SQLite paths resolve against the working directory (backend/ locally, /app in
+    # Docker). The parent folder is created on startup.
+    database_url: str = "sqlite+aiosqlite:///./data/postulo.db"
+
+    # --- Pipeline limits and freshness ---
+    ocr_enabled: bool = False
+    max_tavily_credits_per_run: int = Field(default=20, ge=1)
+    max_llm_calls_per_run: int = Field(default=15, ge=1)
+    recent_days: int = Field(default=45, ge=1)
+    posting_recheck_hours: int = Field(default=24, ge=1)
+    company_cache_days: int = Field(default=30, ge=1)
 
     @property
     def cors_origin_list(self) -> list[str]:

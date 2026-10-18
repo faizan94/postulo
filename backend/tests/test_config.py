@@ -14,6 +14,7 @@ ENV_VARS = [
     "CORS_ORIGINS",
     "LOG_LEVEL",
     "MAX_POSTINGS",
+    "DATABASE_URL",
 ]
 
 
@@ -27,7 +28,9 @@ def clean_env(monkeypatch):
 def test_defaults(clean_env):
     s = Settings(_env_file=None)  # type: ignore[call-arg]
     assert s.nebius_base_url == "https://api.tokenfactory.nebius.com/v1/"
-    assert s.nemotron_model == "nvidia/nemotron-3-super-120b-a12b"
+    assert s.nemotron_model == "nvidia/Nemotron-3.5-Super-VL"
+    assert s.nemotron_fast_model == "nvidia/Nemotron-3_5-Lightning"
+    assert s.database_url.startswith("sqlite+aiosqlite")
     assert s.mock_mode is False
     assert s.nebius_api_key is None
     assert s.cors_origin_list == ["http://localhost:3000"]

@@ -5,13 +5,16 @@ description = "Postulo backend: AI job-application agent (FastAPI + Nemotron on 
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "fastapi>=0.143.5",
     "httpx>=0.28.1",
     "openai>=3.35.1",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.0",
     "pypdf>=6.21.1",
+    "python-docx>=1.2.0",
     "python-multipart>=0.0.32",
+    "sqlalchemy[asyncio]>=2.0",
     "tavily-python>=0.8.5",
     "uvicorn[standard]>=0.54.0",
 ]

@@ -30,3 +30,17 @@ class UpstreamError(PostuloError):
 class BadInputError(PostuloError):
     status_code = 400
     code = "bad_input"
+
+
+class AuthError(PostuloError):
+    """Missing, unknown or expired session token."""
+
+    status_code = 401
+    code = "unauthorized"
+
+
+class NotFoundError(PostuloError):
+    """The resource does not exist or belongs to another user (we don't say which)."""
+
+    status_code = 404
+    code = "not_found"

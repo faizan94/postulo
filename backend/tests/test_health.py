@@ -18,4 +18,4 @@ def test_health_reports_configured_keys(client_factory):
 
 def test_openapi_lists_endpoints(mock_client):
     paths = mock_client.get("/openapi.json").json()["paths"]
-    assert {"/health", "/api/cv", "/api/jobs/search"} <= set(paths)
+    assert {"/health", "/api/auth/login", "/api/cv", "/api/searches", "/api/places"} <= set(paths)

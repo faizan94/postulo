@@ -130,6 +130,12 @@ class LLMClient:
             raise UpstreamError("Nebius rate limit hit. Retry in a moment.") from e
         except openai.APITimeoutError as e:
             raise UpstreamError("Nebius request timed out.") from e
+        except openai.APIStatusError as e:
+            if e.status_code == 402:
+                raise UpstreamError(
+                    "Nebius account has no budget left (402). Add Token Factory credits."
+                ) from e
+            raise UpstreamError(f"Nebius API error: {e}") from e
         except openai.APIError as e:
             raise UpstreamError(f"Nebius API error: {e}") from e
 

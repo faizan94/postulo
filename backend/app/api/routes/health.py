@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app import __version__
 from app.config import Settings, get_settings
-from app.models.schemas import HealthResponse
+from app.schemas.common import HealthResponse
 
 router = APIRouter(tags=["health"])
 
@@ -17,4 +17,7 @@ async def health(settings: Annotated[Settings, Depends(get_settings)]) -> Health
         nebius_configured=settings.nebius_configured,
         tavily_configured=settings.tavily_configured,
         model=settings.nemotron_model,
+        fast_model=settings.nemotron_fast_model,
+        vision_model=settings.nemotron_vision_model,
+        ocr_enabled=settings.ocr_enabled,
     )

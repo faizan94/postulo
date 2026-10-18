@@ -41,7 +41,7 @@ With `MOCK_MODE=true`, the backend returns realistic fake data, so the UI works 
 
 | Layer | Tech |
 |---|---|
-| Models | **NVIDIA Nemotron** (`nvidia/nemotron-3-super-120b-a12b` today; Nemotron 3.5 Super VL once Token Factory lists it), with a reasoning on/off toggle via `chat_template_kwargs` |
+| Models | **NVIDIA Nemotron** (`nvidia/Nemotron-3.5-Super-VL` main, `nvidia/Nemotron-3_5-Lightning` fast, both live on Token Factory), with a reasoning on/off toggle via `chat_template_kwargs` |
 | Inference | **Nebius Token Factory**, an OpenAI-compatible API, called through the `openai` Python SDK |
 | Web data | **Tavily** `/search` (ATS domains, `time_range=month`) and `/extract` (full posting text) |
 | Backend | Python 3.12, FastAPI, Pydantic v2, pydantic-settings, pypdf, httpx, managed with **uv** |
@@ -117,8 +117,8 @@ All variables live in `.env` at the repo root (see [.env.example](.env.example))
 | `MOCK_MODE` | `true` in `.env.example` (the code defaults to `false`) | Return fake data, no API calls |
 | `NEBIUS_API_KEY` | — | Token Factory API key |
 | `NEBIUS_BASE_URL` | `https://api.tokenfactory.nebius.com/v1/` | OpenAI-compatible base URL |
-| `NEMOTRON_MODEL` | `nvidia/nemotron-3-super-120b-a12b` | Main model (CV reading, scoring). Switch to the 3.5 Super VL ID once listed |
-| `NEMOTRON_FAST_MODEL` | same as above | Cheap model for sub-agent steps (for example 3.5 Lightning 30B) |
+| `NEMOTRON_MODEL` | `nvidia/Nemotron-3.5-Super-VL` | Main model (planning, CV profile) |
+| `NEMOTRON_FAST_MODEL` | `nvidia/Nemotron-3_5-Lightning` | Cheap model for sub-agent steps |
 | `TAVILY_API_KEY` | — | Tavily search key (`tvly-...`) |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed frontend origins |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
