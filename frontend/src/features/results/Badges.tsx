@@ -24,13 +24,15 @@ export function CompanyScoreBadge({ score }: { score: CompanyScore }) {
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">
-        <p className="font-medium">
-          Company score{scored && `: ${score.value}/100 · ${COMPANY_BAND_MEANING[score.band]}`}
-        </p>
-        <p className="mt-1 opacity-80">{COMPANY_SCORE_WHAT}</p>
-        <p className="mt-1 opacity-80">
-          {scored ? COMPANY_BANDS_LINE : COMPANY_BAND_MEANING[score.band]}
-        </p>
+        <div>
+          <p className="font-medium">
+            Company score{scored && `: ${score.value}/100 · ${COMPANY_BAND_MEANING[score.band]}`}
+          </p>
+          <p className="mt-1 opacity-80">{COMPANY_SCORE_WHAT}</p>
+          <p className="mt-1 opacity-80">
+            {scored ? COMPANY_BANDS_LINE : COMPANY_BAND_MEANING[score.band]}
+          </p>
+        </div>
       </TooltipContent>
     </Tooltip>
   );
@@ -56,11 +58,13 @@ export function SkillChip({ match }: { match: SkillMatch }) {
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">
-        <p className="font-medium">
-          {s.label} · {r.importance === "must" ? "required" : "nice to have"}
-        </p>
-        <p className="mt-1 opacity-80">“{r.evidence.quote}”</p>
-        {match.cv_evidence && <p className="mt-1 opacity-80">Your CV: “{match.cv_evidence.quote}”</p>}
+        <div>
+          <p className="font-medium">
+            {s.label} · {r.importance === "must" ? "required" : "nice to have"}
+          </p>
+          <p className="mt-1 opacity-80">“{r.evidence.quote}”</p>
+          {match.cv_evidence && <p className="mt-1 opacity-80">Your CV: “{match.cv_evidence.quote}”</p>}
+        </div>
       </TooltipContent>
     </Tooltip>
   );
