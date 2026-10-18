@@ -82,6 +82,15 @@ Edit `.env`: set `MOCK_MODE=false` and fill in `NEBIUS_API_KEY` and `TAVILY_API_
 cd backend && uv run python scripts/list_models.py
 ```
 
+### Deploy on Nebius AI Cloud
+
+Minimum: one CPU VM + Docker Compose (Token Factory still serves Nemotron). See [deploy/nebius/README.md](deploy/nebius/README.md).
+
+```bash
+./deploy/nebius/create-vm.sh   # or: make nebius-create
+./deploy/nebius/deploy.sh      # or: make nebius-deploy
+```
+
 ### Common tasks
 
 | Task | npm (any OS) | make | PowerShell |

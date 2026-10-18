@@ -31,6 +31,9 @@ backend/data/
 *.sqlite
 *.sqlite3
 
+# Nebius deploy local state (IPs, instance ids)
+deploy/nebius/.state/
+
 # OS / editors
 .DS_Store
 Thumbs.db

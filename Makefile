@@ -1,7 +1,7 @@
 # Postulo dev tasks (macOS/Linux/Git Bash). On Windows without make, use the
 # npm scripts in package.json (`npm run dev:backend`, ...) or scripts/dev.ps1.
 
-.PHONY: help setup env dev dev-backend dev-frontend test lint format build docker-build docker-up docker-down
+.PHONY: help setup env dev dev-backend dev-frontend test lint format build docker-build docker-up docker-down nebius-create nebius-deploy nebius-destroy
 
 help:
 	@echo "setup         install backend (uv) and frontend (npm) deps, create .env"
@@ -10,6 +10,9 @@ help:
 	@echo "lint          ruff + eslint"
 	@echo "build         frontend production build"
 	@echo "docker-up     docker compose up --build"
+	@echo "nebius-create create CPU VM on Nebius AI Cloud"
+	@echo "nebius-deploy sync + docker compose on that VM"
+	@echo "nebius-destroy delete the Nebius VM"
 
 env:
 	@test -f .env || cp .env.example .env
@@ -48,3 +51,12 @@ docker-up: env
 
 docker-down:
 	docker compose down
+
+nebius-create:
+	./deploy/nebius/create-vm.sh
+
+nebius-deploy:
+	./deploy/nebius/deploy.sh
+
+nebius-destroy:
+	./deploy/nebius/destroy.sh
