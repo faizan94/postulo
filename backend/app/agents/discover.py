@@ -19,7 +19,7 @@ from app.services.tavily_client import SearchResult
 
 log = logging.getLogger(__name__)
 
-MAX_BOARDS_PER_ROUND = 12
+MAX_BOARDS_PER_ROUND = 8
 MAX_PER_COMPANY = 3
 MIN_TEXT_CHARS = 200
 
@@ -38,6 +38,8 @@ class SearchLike(Protocol):
 
 class BoardsLike(Protocol):
     async def jobs(self, ref: BoardRef) -> list[BoardJob] | None: ...
+
+    async def fill_text(self, job: BoardJob) -> None: ...
 
 
 @dataclass
@@ -62,34 +64,43 @@ class Candidate:
     newest_on_board: date | None
 
 
-async def discover(queries: list[Query], tavily: SearchLike, credit_budget: int) -> Discovery:
+def _mentions_place(result: dict[str, object], wanted: list[Place]) -> bool:
+    text = " ".join(str(result.get(k) or "") for k in ("title", "content", "url"))
+    loc = JobLocation(text, None, "remote" in text.lower())
+    return any(places().matches(loc, p) for p in wanted)
+
+
+async def discover(
+    queries: list[Query], tavily: SearchLike, credit_budget: int, wanted: list[Place] | None = None
+) -> Discovery:
+    """Tavily finds company boards. Boards whose hits mention the user's place come first."""
     d = Discovery()
+    order: dict[tuple[str, str, bool], tuple[int, int]] = {}  # key -> (mentions place, first seen)
+    refs: dict[tuple[str, str, bool], BoardRef] = {}
+    found: dict[str, tuple[tuple[str, str, bool], BoardRef, str]] = {}
     for q in queries:
         if d.credits >= credit_budget:
             break
+        # No `country` boost: tested live, it often returned zero results together with
+        # include_domains (costing a retry). The place is in the query text instead.
         res = await tavily.search(
-            q.text,
-            include_domains=ATS_DOMAINS,
-            time_range="month",
-            max_results=10,
-            country=q.country,
+            q.text, include_domains=ATS_DOMAINS, time_range="month", max_results=10
         )
         d.credits += res.credits
-        if not res.results and q.country and d.credits < credit_budget:
-            # Tavily occasionally returns nothing with a country boost; retry once without it.
-            res = await tavily.search(
-                q.text, include_domains=ATS_DOMAINS, time_range="month", max_results=10
-            )
-            d.credits += res.credits
         for r in res.results:
             ref = detect(str(r.get("url", "")))
             if ref is None:
                 continue
             key = (ref.ats, ref.slug.lower(), ref.eu)
-            if key not in d.refs and len(d.refs) < MAX_BOARDS_PER_ROUND:
-                d.refs[key] = BoardRef(ref.ats, ref.slug, None, ref.eu)
-            if ref.job_id and key in d.refs:
-                d.found_jobs[str(r["url"])] = (ref, str(r.get("title") or "Job posting"))
+            mentions = 1 if wanted and _mentions_place(r, wanted) else 0
+            seen = order.get(key)
+            order[key] = (max(mentions, seen[0] if seen else 0), seen[1] if seen else len(order))
+            refs.setdefault(key, BoardRef(ref.ats, ref.slug, None, ref.eu))
+            if ref.job_id:
+                found[str(r["url"])] = (key, ref, str(r.get("title") or "Job posting"))
+    best = sorted(order, key=lambda k: (-order[k][0], order[k][1]))[:MAX_BOARDS_PER_ROUND]
+    d.refs = {k: refs[k] for k in best}
+    d.found_jobs = {url: (ref, title) for url, (key, ref, title) in found.items() if key in d.refs}
     return d
 
 
@@ -161,10 +172,22 @@ async def expand(
                     )
                 )
                 continue
-            if len(j.text) < MIN_TEXT_CHARS:
-                dropped.append(Dropped(j.title, j.company, j.url, "no readable job text"))
-                continue
             matches.append(Candidate(j, len(jobs), newest))
         matches.sort(key=lambda c: c.job.posted_at or date.min, reverse=True)
-        kept.extend(matches[:MAX_PER_COMPANY])
+        shortlist = matches[: MAX_PER_COMPANY + 1]
+
+        async def fill(c: Candidate) -> None:
+            async with sem:
+                await boards.fill_text(c.job)
+
+        await asyncio.gather(*(fill(c) for c in shortlist))
+        with_text = []
+        for c in shortlist:
+            if len(c.job.text) < MIN_TEXT_CHARS:
+                dropped.append(
+                    Dropped(c.job.title, c.job.company, c.job.url, "no readable job text")
+                )
+            else:
+                with_text.append(c)
+        kept.extend(with_text[:MAX_PER_COMPANY])
     return kept, dropped

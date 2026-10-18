@@ -184,7 +184,7 @@ async def run_search(ctx: RunContext) -> None:
             # 2. Discover
             await rec.stage("searching")
             budget = ctx.settings.max_tavily_credits_per_run - rec.credits
-            d = await discover(queries, ctx.tavily, budget)
+            d = await discover(queries, ctx.tavily, budget, wanted)
             rec.credits += d.credits
             rec.log(
                 "searching",
@@ -215,7 +215,8 @@ async def run_search(ctx: RunContext) -> None:
             note = why
             ctx.bus.publish(ctx.search_id, {"type": "note", "message": why})
             rec.log("checking", f"Widening: {why}")
-            queries = template_queries(new_titles or titles, new_places or wanted)
+            # at most 2 extra queries per widening round, to save credits
+            queries = template_queries(new_titles or titles[:1], new_places or wanted[:1])[:2]
 
         # 4. Read and store
         await rec.stage("reading")

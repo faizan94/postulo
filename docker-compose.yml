@@ -6,6 +6,8 @@ services:
     env_file: .env
     ports:
       - "8000:8000"
+    volumes:
+      - postulo-data:/app/data   # SQLite survives rebuilds
     healthcheck:
       test:
         - CMD
@@ -41,3 +43,6 @@ services:
       retries: 5
       start_period: 15s
     restart: unless-stopped
+
+volumes:
+  postulo-data:

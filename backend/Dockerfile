@@ -20,7 +20,8 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
 COPY scripts ./scripts
 
-RUN useradd --create-home --uid 10001 appuser && chown -R appuser /app
+# SQLite lives in /app/data (a volume in docker-compose.yml).
+RUN mkdir -p /app/data && useradd --create-home --uid 10001 appuser && chown -R appuser /app
 USER appuser
 
 ENV PATH="/app/.venv/bin:$PATH"

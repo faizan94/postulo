@@ -1,52 +1,44 @@
 # Postulo
 
-> **LinkedIn shows you jobs. Postulo tells you which ones are real, why you fit, and what's missing.**
+> **Open, recent jobs that fit your CV, with an honest match score and what to learn next.**
 
-Postulo is an AI job-application agent. You upload a CV (PDF) and say what you're looking for. An **orchestrator agent** splits the work across specialised sub-agents:
+Sign in with a name, upload your CV (PDF, Word or pasted text) and Postulo runs your first search automatically:
 
-1. **Search** looks for recent postings on company career pages and applicant-tracking systems (Greenhouse, Lever, Ashby, Personio, Workday, join.com and others), where many roles appear first or only.
-2. **Verify** checks that the company exists, the posting is still live, and it is recent. It flags **ghost jobs**: dead links, closed roles and stale reposts.
-3. **Score** reads each posting and tags every required skill:
-   - 🟡 **gold**: a match, you have it
-   - 🟠 **orange**: a gap worth covering
-   - 🔴 **red**: an important gap
+1. **Plan**: Nemotron 3.5 Super VL writes search queries from your job titles, places and skills.
+2. **Discover**: Tavily finds company job boards (Greenhouse, Lever, Ashby).
+3. **Quiet checks**: the boards' public APIs say which jobs are still open, how fresh they are and where they are. Closed, stale or wrong-place jobs are dropped silently (judges can see them in "How it works").
+4. **Match**: Nemotron 3.5 Lightning extracts each job's requirements with verbatim quotes; code checks every quote and computes the **match score** with a fixed formula. A **company score** comes from public hiring signals.
+5. **Learn next**: a skill chart across your matches and Gap ROI, the skill that would lift the most jobs.
 
-You get a briefing of **5-10 verified postings**, each with a star score, the skill breakdown, and a "why" that quotes the posting.
-
-MVP scope: no auto-applying. Cover letters, contacts and CV tweaks come later.
+If Nemotron is unavailable, grounded rule-based extraction takes over, so the app always works. See [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) for the plan and decision log.
 
 ## Architecture
 
 ```
-                         ┌───────────────────────────── backend (FastAPI) ─────────────────────────────┐
- ┌──────────────┐  PDF   │  POST /api/cv          ┌──────────────┐                                     │
- │  Next.js UI  │ ─────► │  cv_parser (pypdf) ──► │ Orchestrator │──► Profile (skills, years, roles)   │
- │  :3000       │        │                        │  (Nemotron)  │                                     │
- │              │  JSON  │  POST /api/jobs/search └──────┬───────┘                                     │
- │ upload →     │ ─────► │            ┌──────────────────┼──────────────────┐   top-up round if        │
- │ preferences →│        │            ▼                  ▼                  ▼   fewer than 5 verified  │
- │ results      │ ◄───── │   ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ (Berlin→DE→World)│
- └──────────────┘ scored │   │ 1. Search      │→│ 2. Verify      │→│ 3. Score       │                  │
-                 postings│   │ Tavily /search │ │ HTTP liveness, │ │ Tavily /extract│                  │
-                 + trace │   │ ATS domains,   │ │ Tavily company │ │ + Nemotron     │                  │
-                         │   │ last month     │ │ lookup, dates  │ │ (reasoning on) │                  │
-                         │   └────────────────┘ └────────────────┘ └────────────────┘                  │
-                         └──────────────────────────────────────────────────────────────────────────────┘
-                              Nemotron via Nebius Token Factory (OpenAI-compatible)  ·  Tavily web search
+Next.js 16 (shadcn/ui, Recharts, TanStack Query)
+   |  REST + live stream (text/event-stream read via fetch)
+   v
+FastAPI -- SQLite (users, CV versions, searches, posting + company caches)
+   |
+   +- CV intake: pypdf / python-docx / text -> cleaning (no email, phone, birth date) -> review
+   +- Profile: Nemotron Super VL (quotes verified) + glossary rules
+   +- Search run (background task, streamed):
+        plan (Nemotron) -> Tavily -> board APIs -> quiet checks -> widen in country (<=3 rounds)
+        -> requirements (Nemotron Lightning, cached) -> match + score (code) -> company score
+        -> rank -> skill summary + Gap ROI
 ```
 
-With `MOCK_MODE=true`, the backend returns realistic fake data, so the UI works without any API keys.
+With `MOCK_MODE=true`, fake Tavily and job boards run under the real pipeline, so the UI works without keys.
 
 ## Tech stack
 
 | Layer | Tech |
 |---|---|
-| Models | **NVIDIA Nemotron** (`nvidia/Nemotron-3.5-Super-VL` main, `nvidia/Nemotron-3_5-Lightning` fast, both live on Token Factory), with a reasoning on/off toggle via `chat_template_kwargs` |
-| Inference | **Nebius Token Factory**, an OpenAI-compatible API, called through the `openai` Python SDK |
-| Web data | **Tavily** `/search` (ATS domains, `time_range=month`) and `/extract` (full posting text) |
-| Backend | Python 3.12, FastAPI, Pydantic v2, pydantic-settings, pypdf, httpx, managed with **uv** |
-| Frontend | Next.js 16 (App Router, TypeScript, Tailwind CSS 4, ESLint), npm |
-| Ops | Docker (multi-stage, non-root, healthchecks), docker compose |
+| Models | **NVIDIA Nemotron** on **Nebius Token Factory**: `nvidia/Nemotron-3.5-Super-VL` (planning, CV), `nvidia/Nemotron-3_5-Lightning` (requirements) |
+| Web data | **Tavily** `/search` (raw API, `include_published_date`, usage counted, cached) + Greenhouse, Lever, Ashby public job-board APIs |
+| Backend | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2 (async, SQLite), pypdf, python-docx, httpx, **uv** |
+| Frontend | Next.js 16 (App Router, Cache Components), React 19, Tailwind CSS 4, shadcn/ui (Radix), Recharts, lucide-react, TanStack Query, sonner |
+| Ops | Docker (non-root, healthchecks, data volume), docker compose |
 
 ## Prerequisites
 
@@ -99,15 +91,6 @@ cd backend && uv run python scripts/list_models.py
 | Frontend build | `npm run build` | `make build` | `cd frontend; npm run build` |
 | Docker | `npm run docker:up` | `make docker-up` | `docker compose up --build` |
 
-### CLI (no UI)
-
-Run the whole pipeline from the terminal. It writes `output/{date}/profile.json`, `results.json` and `briefing.md`, which makes it useful for tuning prompts and caching demo runs:
-
-```bash
-cd backend
-uv run python -m app run path/to/cv.pdf --location Berlin --prompt "data roles" --mock
-```
-
 ## Environment variables
 
 All variables live in `.env` at the repo root (see [.env.example](.env.example)).
@@ -123,76 +106,69 @@ All variables live in `.env` at the repo root (see [.env.example](.env.example))
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed frontend origins |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 | `MAX_POSTINGS` | `10` | Postings returned per search (1-20) |
+| `NEMOTRON_VISION_MODEL` | `nvidia/Nemotron-3.5-Super-VL` | Vision model for OCR (stretch) |
+| `OCR_ENABLED` | `false` | Accept image/scan CVs (stretch) |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/postulo.db` | SQLite file; folder is created on startup |
+| `MAX_TAVILY_CREDITS_PER_RUN` | `20` | Tavily credit budget per search |
+| `MAX_LLM_CALLS_PER_RUN` | `15` | Nemotron call budget per search (rules take over after) |
+| `RECENT_DAYS` | `45` | Older postings are dropped quietly |
+| `POSTING_RECHECK_HOURS` / `COMPANY_CACHE_DAYS` | `24` / `30` | Cache lifetimes |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend URL as seen from the browser. It is inlined at frontend build time |
 
 If keys are missing and `MOCK_MODE=false`, the API returns HTTP 503 with `{"error": {"code": "missing_api_key", ...}}`. It does not crash.
 
 ## API
 
-| Method | Path | Body | Returns |
-|---|---|---|---|
-| `GET` | `/health` | — | Status, mock mode, which keys are configured, the model ID |
-| `POST` | `/api/cv` | multipart: `file` (PDF, ≤10 MB), optional `prompt` | `{profile, cv_text_chars, mock}` |
-| `POST` | `/api/jobs/search` | `{profile, preferences: {location: "Berlin"\|"Germany"\|"World", prompt}}` | `{profile, postings[], rejected[], trace[], mock}` |
+All `/api/*` routes except login and places need `Authorization: Bearer <token>`. Full list and shapes: [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) §5.4 and http://localhost:8000/docs.
 
-Interactive docs are at http://localhost:8000/docs. The response shape follows idea.md §9:
-
-```json
-{
-  "title": "Data Engineer", "company": "...", "url": "...", "posted": "2026-10-10",
-  "verified": {"company_exists": true, "posting_live": true, "recent": true},
-  "score": 4.5,
-  "skills": [{"name": "Python", "status": "gold"}, {"name": "Airflow", "status": "orange"}],
-  "why": "Matches 7/9 required skills; quoted requirement: '...'"
-}
-```
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Status, mock mode, keys configured, model IDs |
+| `POST` | `/api/auth/login` · `/api/auth/logout` | Name-only login, token |
+| `GET` / `PUT` / `DELETE` | `/api/me`, `/api/me/settings` | Current user, search defaults, delete my data |
+| `GET` | `/api/places?q=` | Fixed places list (city, country, Remote) |
+| `POST` / `PUT` / `GET` / `DELETE` | `/api/cv`, `/api/cv/{id}` | Upload or paste, review and confirm, list, delete CV versions |
+| `POST` / `GET` | `/api/searches`, `/api/searches/{id}` | Start a search, history, detail (safe to reload) |
+| `GET` | `/api/searches/{id}/events` | Live stream (`text/event-stream`, snapshot first) |
+| `POST` | `/api/searches/{id}/rerun` | Same inputs, fresh checks |
+| `GET` | `/api/postings/{id}?search_id=` | Job detail: full post, apply link, match breakdown, company score |
+| `GET` | `/api/how/{search_id}` | Judge view: agent trace, quiet drops, credits used |
 
 ## Project structure
 
 ```
 postulo/
-├── backend/                     FastAPI app (uv)
-│   ├── app/
-│   │   ├── main.py              app factory, CORS, error handler
-│   │   ├── config.py            pydantic-settings (.env)
-│   │   ├── errors.py            MissingAPIKeyError / UpstreamError / BadInputError → JSON
-│   │   ├── cli.py               `python -m app run cv.pdf`
-│   │   ├── api/routes/          health.py, cv.py, jobs.py
-│   │   ├── agents/
-│   │   │   ├── orchestrator.py  profile extraction + search→verify→score loop
-│   │   │   ├── search_agent.py  Tavily queries over ATS domains
-│   │   │   ├── verify_agent.py  liveness, company, recency → ghost-job filter
-│   │   │   ├── score_agent.py   gold/orange/red skills + star score
-│   │   │   ├── prompts/         one system prompt per agent
-│   │   │   └── mock_data.py     MOCK_MODE fixtures
-│   │   ├── services/            llm.py (Nebius), tavily_client.py, cv_parser.py
-│   │   └── models/schemas.py    API data shapes
-│   ├── scripts/list_models.py   list Nemotron IDs on Token Factory
-│   ├── tests/                   pytest, no API keys needed
-│   └── Dockerfile
-├── frontend/                    Next.js (npm)
-│   ├── src/app/                 layout + page
-│   ├── src/components/          PostuloFlow, PostingCard, SkillChip, StarScore, ...
-│   ├── src/lib/                 api.ts (fetch client), types.ts (mirrors schemas.py)
-│   └── Dockerfile
-├── docs/                        design notes and references
-├── scripts/                     dev.ps1, check.ps1 (Windows)
-├── docker-compose.yml
-├── .env.example
-├── Makefile · package.json      task runners (make / npm)
-└── LICENSE (MIT)
+├── backend/app/
+│   ├── main.py, config.py, errors.py, events.py (stream bus), runner.py (background searches)
+│   ├── api/                 deps.py (auth, DB), presenters.py (rows -> API), routes/
+│   ├── db/                  engine.py (SQLite, WAL), tables.py, repos/
+│   ├── schemas/             API shapes (frontend/src/lib/types.ts mirrors them)
+│   ├── agents/              orchestrator, planner, discover (boards + quiet checks),
+│   │                        requirements, profile, llm_gate, prompts/
+│   ├── domain/              pure logic: evidence, glossary, places, titles, years, rules, matching
+│   ├── scoring/             match_score, company_score, rank, summary (skills + Gap ROI)
+│   └── services/            llm.py, tavily_client.py, ats.py (Greenhouse/Lever/Ashby),
+│                            html_text.py, intake/ (PDF, docx, text, cleaning), fakes.py (mock)
+├── frontend/src/
+│   ├── app/                 login, (app)/onboarding, search/[id], search/[id]/job/[postingId],
+│   │                        new-search, history, settings, how/[id]
+│   ├── components/ui/       shadcn/ui (Radix)
+│   ├── features/            auth, cv, search, results, job, shell
+│   └── lib/                 api/, sse.ts, types.ts, status.ts, format.ts
+└── docs/PHASE1_PLAN.md      the plan and decision log
 ```
 
 ## Where to extend
 
-- **Better CV reading**: send the PDF pages as images to Nemotron 3.5 Super VL. See the note in `backend/app/services/cv_parser.py`.
-- **More job sources**: add domains to `ATS_DOMAINS` in `backend/app/services/tavily_client.py`.
-- **Stricter ghost-job detection**: add markers and rules in `backend/app/agents/verify_agent.py`.
-- **Advisor agent** (cover letter, contacts, CV tweaks): add `app/agents/advisor_agent.py` and a prompt in `app/agents/prompts/`, then call it from the orchestrator.
-- **Prompt tuning**: everything is in `backend/app/agents/prompts/`. Iterate with the CLI.
+- **Scanned CVs / photos (stretch)**: `NEMOTRON_VISION_MODEL` + `OCR_ENABLED`; add `services/intake/ocr.py`.
+- **More job boards**: add a parser in `backend/app/services/ats.py` and its domain to `ATS_DOMAINS`.
+- **Company news signal (stretch)**: Tavily `topic=news` in `agents/` + `scoring/company_score.py`.
+- **Skills**: aliases and related groups live in `backend/app/domain/data/glossary.json`.
+- **Prompts**: `backend/app/agents/prompts/`.
 
 ## Docs
 
+- [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md): Phase 1 plan, decisions, scoring formulas.
 - [docs/reference-ai-agent-orchestrator.md](docs/reference-ai-agent-orchestrator.md): what we took from `mathcrypto/ai-agent-orchestrator`, and why.
 
 ## Team
@@ -207,7 +183,7 @@ postulo/
 
 Built in one day at The Delta Campus (hosted by Nebius; sponsors NVIDIA, Nebius and Tavily).
 
-- **Track:** _TBD (Agentic Deep Research or Nemotron Agentic AI)_
+- **Track:** Agentic Deep Research with Token Factory and Tavily (main), Nemotron Agentic AI (subtrack)
 - **Demo:** _link_
 
 ## License

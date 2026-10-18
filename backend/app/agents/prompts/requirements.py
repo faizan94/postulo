@@ -8,7 +8,9 @@ Postings may be in German or English.
 - Use ONLY the posting text. Never add requirements that are not written there.
 - Every requirement needs "quote": a short verbatim copy (5-200 chars) of the posting text,
   in the original language. If you cannot quote it, leave it out.
-- "name": a short canonical ENGLISH skill name (e.g. "Kubernetes", "German", "SQL").
+- "name": ONE short canonical ENGLISH skill name, 1-3 words (e.g. "Kubernetes", "German",
+  "SQL", "Apache Airflow"). Split lists: "Airflow/Flyte/Ray" -> three requirements.
+  Use the tool's common name, not a description ("Apache Spark", not "big data processing").
 - "type": tech | soft | domain | language | years | degree.
 - "importance": "must" for required items, "nice" for nice-to-have, bonus, plus, preferred.
   Skills only mentioned under tasks or responsibilities are "nice".

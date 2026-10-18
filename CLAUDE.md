@@ -23,7 +23,6 @@ uv run uvicorn app.main:app --reload --port 8000
 uv run pytest                      # must pass without API keys
 uv run ruff check . && uv run ruff format --check .
 uv run mypy app
-uv run python -m app run cv.pdf --location Berlin --mock   # pipeline CLI -> output/{date}/
 
 # frontend (from frontend/)
 npm run dev
@@ -37,17 +36,20 @@ Before saying a change is done: backend changes -> pytest + ruff; frontend chang
 
 ## Layout
 
-- `backend/app/agents/orchestrator.py`: profile extraction + search -> verify -> score loop (widens location if fewer than 5 verified).
-- `backend/app/agents/{search,verify,score}_agent.py`: the sub-agents. Prompts live in `backend/app/agents/prompts/`, never inline.
-- `backend/app/services/`: `llm.py` (Nebius client, `reasoning="off"|"on"|"medium"` via `chat_template_kwargs`), `tavily_client.py`, `cv_parser.py`.
-- `backend/app/models/schemas.py`: API shapes. **`frontend/src/lib/types.ts` mirrors it; change both together.**
-- `backend/app/agents/mock_data.py`: data returned when `MOCK_MODE=true`.
-- `frontend/src/components/PostuloFlow.tsx`: the upload -> preferences -> results flow.
+Plan and decision log: [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md). If code and plan disagree, fix one of them.
+
+- `backend/app/agents/orchestrator.py`: the search state machine (plan -> discover -> quiet checks -> widen -> requirements -> match -> company score -> rank). Results are saved and streamed as they come.
+- `backend/app/agents/`: `planner.py`, `discover.py` (Tavily finds boards; board APIs give open jobs), `requirements.py`, `profile.py`, `llm_gate.py` (every LLM call goes through it; rules take over on failure). Prompts live in `agents/prompts/`, never inline.
+- `backend/app/domain/`: pure logic (evidence quote checks, glossary, places, titles, years, rule-based extraction, matching). `backend/app/scoring/`: fixed formulas. Both are unit-tested without I/O.
+- `backend/app/services/`: `llm.py` (Nebius, `reasoning="off"|"on"|"medium"`), `tavily_client.py` (raw API, cached), `ats.py` (Greenhouse/Lever/Ashby), `intake/` (PDF, docx, text, cleaning), `fakes.py` (mock mode).
+- `backend/app/schemas/`: API shapes. **`frontend/src/lib/types.ts` mirrors them; change both together.**
+- `backend/app/db/`: SQLite via async SQLAlchemy; tables created on startup.
+- `frontend/src/app/`: routes; `frontend/src/features/`: screens' building blocks; `frontend/src/components/ui/`: shadcn/ui.
 
 ## Conventions
 
 - Expected failures raise `PostuloError` subclasses (`app/errors.py`) and become `{"error": {code, message}}` JSON. Missing keys -> 503, never a crash.
-- Every new endpoint or agent behaviour needs a mock-mode path so the frontend works without keys, plus a test that runs without network.
+- Every new endpoint or agent behaviour needs a mock-mode path so the frontend works without keys, plus a test that runs without network. Mock mode = fake Tavily and boards (`services/fakes.py`) over a real SQLite DB.
 - Settings come only from `app/config.py` (pydantic-settings); add new env vars there **and** to `.env.example` and the README env table.
 - Python: ruff (line length 100), type hints, async I/O. TypeScript: strict, Tailwind classes, no new UI libraries without asking.
 - Next.js 16 has breaking changes from older versions: read `frontend/AGENTS.md` and the docs in `frontend/node_modules/next/dist/docs/` before using unfamiliar APIs.

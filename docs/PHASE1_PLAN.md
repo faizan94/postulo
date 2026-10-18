@@ -541,3 +541,33 @@ Version 1 was checked by an independent reviewer against the code, the project n
 - **Existing code:** `chat_json` gets a schema argument, the settings list is complete, `/health` reports models.
 - **Sort and Gap ROI:** one sort key (D16); Gap ROI excludes years and degree; `SkillSummary.user_status`.
 - **Tests and milestones:** an honest fairness test and consistent milestone names.
+
+---
+
+## 14. Implementation status (built 18 Oct 2026)
+
+Core is built and tested (backend: ruff, mypy, 47 tests; frontend: lint, typecheck, production build; browser click-through in Chrome on real Tavily and board data). Where the build differs from §5–§8, this section wins.
+
+**Verified live**
+- Token Factory lists `nvidia/Nemotron-3.5-Super-VL`, `nvidia/Nemotron-3_5-Lightning`, `nvidia/nemotron-3-super-120b-a12b`. The `.env.example` ID in §5.8 was correct after all. The account returned 402 (no budget) at first and worked later; every LLM step falls back to grounded rules, so a 402 never breaks a search.
+- Tavily's raw API accepts `include_published_date` and returns `usage.credits`; the SDK lacks the argument, so `tavily_client.py` calls the API directly and caches results for 6 h.
+- Greenhouse, Lever and Ashby board APIs: free, no auth; missing jobs return 404. Greenhouse's light list includes `first_published`.
+
+**Changes from the plan**
+
+| Plan said | Built | Why |
+|---|---|---|
+| Generic job pages via HTTP + JSON-LD (`page_data.py`) | Only Greenhouse, Lever and Ashby boards (Tavily `include_domains` limited to them) | Their APIs answer open/closed, date, place and text authoritatively; no scraping |
+| Tavily `country` boost | Removed | Tested live: with `include_domains` it often returned zero results and cost a retry |
+| `match_cache` table + LLM "related" pass | Related = glossary groups, deterministic | Same score for same input (D6) without a cache or an LLM call |
+| Greenhouse `?content=true` list | Light list, then text per candidate job; board downloads capped at 6 MB / 20 s, parsed off the event loop | `doordashusa` was 8.5 MB and the `jobgether` aggregator 42 MB; they stalled a search |
+| Folders `services/ats/`, `services/fakes/`, `agents/checks.py`, `agents/matcher.py` | `services/ats.py`, `services/fakes.py`, checks inside `agents/discover.py`, `domain/matching.py`, plus `agents/llm_gate.py`, `api/presenters.py`, `scoring/summary.py` | Fewer files for the same responsibilities |
+| Requirements cached by text hash | Cached by text hash **and** `EXTRACTION_VERSION` (now `v3`) | Fixes to extraction re-run old cache entries |
+| — | LLM requirement names are canonicalised through the glossary ("Airflow/Flyte/Ray" -> Apache Airflow; any degree -> Degree) | Found in the browser test: compound names caused false must-have gaps |
+| — | Rule extraction ignores domain/soft words in the company intro before the first header | Found in the browser test: "...ranging from Marketing, Sales" became a gap |
+| — | Compound titles are split ("Lead Data & AI Engineer" -> "Lead Data Engineer", "AI Engineer") | Found in the browser test: 0 results |
+| — | Boards whose Tavily hits mention the user's place are fetched first (max 8 per round); widening rounds add at most 2 queries | Saves credits and board fetches |
+
+**Not built (Stretch, unchanged):** OCR for images and scans, company news signal, LLM reflect step (Core uses rule-based widening), saved jobs and "closed since you saved it". `POSTING_RECHECK_HOURS` and `COMPANY_CACHE_DAYS` exist as settings but are not enforced yet (board lists and Tavily results use a 6 h in-memory cache; postings and companies are upserted in the DB).
+
+**Measured on real data (Data Engineer, Berlin):** 6–12 Tavily credits for a first run, about 30–40 s end to end, 3 Nemotron calls (plan + requirement batches); quiet drops included closed jobs, a 111-day-old posting and a Warsaw job. Company scores are often "Strong" for big hiring companies, because the Core signal is hiring activity only.

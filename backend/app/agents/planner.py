@@ -9,7 +9,7 @@ from app.domain.titles import tokens
 from app.schemas.common import Place
 from app.schemas.profile import Profile
 
-MAX_QUERIES = 4
+MAX_QUERIES = 3
 
 
 @dataclass(frozen=True)

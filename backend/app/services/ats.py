@@ -4,6 +4,8 @@ A job on its company's board list is open; anything else is closed (G7). The boa
 gives the posting date, location, apply link and full text, so no page scraping is needed.
 """
 
+import asyncio
+import json
 import logging
 import re
 import time
@@ -57,6 +59,7 @@ class BoardJob:
     apply_url: str
     text: str
     own_domain: str | None = None
+    needs_text: bool = False  # Greenhouse light list: call BoardsService.fill_text()
 
 
 def _clean_url(url: str) -> str:
@@ -139,8 +142,10 @@ def parse_greenhouse(slug: str, data: dict[str, Any]) -> list[BoardJob]:
                 workplace_type=_workplace(None, "remote" in loc.lower()),
                 posted_at=_date(j.get("first_published")) or _date(j.get("updated_at")),
                 apply_url=absolute or f"https://job-boards.greenhouse.io/{slug}/jobs/{jid}",
-                text=html_to_text(j.get("content") or "", escaped=True),
+                # The light list has no content: text is fetched per job only for candidates.
+                text=html_to_text(j.get("content") or "", escaped=True) if j.get("content") else "",
                 own_domain=own,
+                needs_text=not j.get("content"),
             )
         )
     return jobs
@@ -209,10 +214,19 @@ def parse_ashby(slug: str, data: dict[str, Any]) -> list[BoardJob]:
     return jobs
 
 
+MAX_BOARD_BYTES = 6 * 1024 * 1024  # job aggregators can return 40+ MB; skip those boards
+BOARD_DEADLINE_SECONDS = 20
+
+
+class BoardTooLargeError(ValueError):
+    pass
+
+
 class BoardsService:
     """Fetches a company's open jobs. Lists are cached for 6 h (free API, but be polite)."""
 
     _cache: dict[tuple[str, str, bool], tuple[float, list[BoardJob]]] = {}
+    _texts: dict[str, str] = {}
 
     def __init__(self, client: httpx.AsyncClient | None = None) -> None:
         self._client = client or httpx.AsyncClient(
@@ -229,29 +243,64 @@ class BoardsService:
         if hit and time.monotonic() - hit[0] < BOARD_CACHE_SECONDS:
             return hit[1]
         try:
-            jobs = await self._fetch(ref)
-        except (httpx.HTTPError, ValueError) as e:
-            log.warning("Board %s/%s failed: %s", ref.ats, ref.slug, e)
+            jobs = await asyncio.wait_for(self._fetch(ref), BOARD_DEADLINE_SECONDS)
+        except (httpx.HTTPError, ValueError, TimeoutError) as e:
+            log.warning("Board %s/%s skipped: %s", ref.ats, ref.slug, e or type(e).__name__)
             return None
         if jobs is not None:
             self._cache[key] = (time.monotonic(), jobs)
         return jobs
 
+    async def fill_text(self, job: BoardJob) -> None:
+        """Fetch the full text of one Greenhouse job (the light list has none)."""
+        if not job.needs_text:
+            return
+        if job.url in self._texts:
+            job.text, job.needs_text = self._texts[job.url], False
+            return
+        api = f"https://boards-api.greenhouse.io/v1/boards/{job.slug}/jobs/{job.external_id}"
+        try:
+            r = await self._client.get(api)
+            if r.status_code == 200:
+                content = r.json().get("content") or ""
+                job.text = await asyncio.to_thread(html_to_text, content, escaped=True)
+                self._texts[job.url] = job.text
+        except (httpx.HTTPError, ValueError) as e:
+            log.warning("Job text %s failed: %s", job.url, e)
+        job.needs_text = False
+
+    async def _get_json(self, url: str) -> Any | None:
+        async with self._client.stream("GET", url) as r:
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            size = int(r.headers.get("content-length") or 0)
+            if size > MAX_BOARD_BYTES:
+                raise BoardTooLargeError(f"board too large ({size} bytes)")
+            chunks, total = [], 0
+            async for chunk in r.aiter_bytes():
+                total += len(chunk)
+                if total > MAX_BOARD_BYTES:
+                    raise BoardTooLargeError("board too large")
+                chunks.append(chunk)
+        return json.loads(b"".join(chunks))
+
     async def _fetch(self, ref: BoardRef) -> list[BoardJob] | None:
         if ref.ats == "greenhouse":
-            url = f"https://boards-api.greenhouse.io/v1/boards/{ref.slug}/jobs?content=true"
+            url = f"https://boards-api.greenhouse.io/v1/boards/{ref.slug}/jobs"
         elif ref.ats == "lever":
             base = "https://api.eu.lever.co" if ref.eu else "https://api.lever.co"
             url = f"{base}/v0/postings/{ref.slug}?mode=json"
         else:
             url = f"https://api.ashbyhq.com/posting-api/job-board/{ref.slug}"
-        r = await self._client.get(url)
-        if r.status_code == 404:
+        data = await self._get_json(url)
+        if data is None:
             return None
-        r.raise_for_status()
-        data = r.json()
+        # Parsing large boards is CPU work: keep it off the event loop.
         if ref.ats == "greenhouse":
-            return parse_greenhouse(ref.slug, data)
+            return await asyncio.to_thread(parse_greenhouse, ref.slug, data)
         if ref.ats == "lever":
-            return parse_lever(ref.slug, data if isinstance(data, list) else [])
-        return parse_ashby(ref.slug, data)
+            return await asyncio.to_thread(
+                parse_lever, ref.slug, data if isinstance(data, list) else []
+            )
+        return await asyncio.to_thread(parse_ashby, ref.slug, data)

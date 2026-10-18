@@ -1,6 +1,6 @@
 # Postulo backend
 
-FastAPI service that runs the agent pipeline: CV → profile → search → verify → score.
+FastAPI service: name login, CV versions, and the search pipeline (plan -> discover -> quiet checks -> requirements -> match -> rank).
 It is managed with [uv](https://docs.astral.sh/uv/).
 
 ## Run
@@ -21,30 +21,26 @@ uv run ruff format .
 uv run mypy app
 ```
 
-## CLI
+## Scripts
 
 ```bash
-uv run python -m app cv  path/to/cv.pdf                      # print the extracted profile
-uv run python -m app run path/to/cv.pdf --location Germany   # full pipeline → output/{date}/
-uv run python -m app run path/to/cv.pdf --mock               # force mock data
-uv run python scripts/list_models.py                         # Nemotron IDs on Token Factory
+uv run python scripts/list_models.py      # Nemotron IDs on Token Factory
 ```
 
 ## Layout
 
 | Path | What it does |
 |---|---|
-| `app/main.py` | App factory, CORS, and the `PostuloError` → JSON handler |
-| `app/config.py` | `Settings` (pydantic-settings) and the cached `get_settings()` dependency |
-| `app/api/routes/` | `GET /health`, `POST /api/cv`, `POST /api/jobs/search` |
-| `app/agents/orchestrator.py` | `extract_profile()` and `run_job_search()`, including the widening top-up rounds |
-| `app/agents/search_agent.py` | Builds queries, calls Tavily over `ATS_DOMAINS`, parses company and title from ATS URLs |
-| `app/agents/verify_agent.py` | HTTP liveness and closed-page markers, Tavily company lookup, and recency (45 days) |
-| `app/agents/score_agent.py` | Tavily `/extract` plus a Nemotron JSON call per posting (reasoning on) → `Posting` |
-| `app/agents/prompts/` | System prompts (Scope → Hard rules → Return value) |
-| `app/services/llm.py` | `LLMClient`: OpenAI SDK pointed at Nebius, the `reasoning="off"\|"on"\|"medium"` toggle, `chat_json()` with tolerant parsing |
-| `app/services/tavily_client.py` | `TavilyService`: `search`, `search_jobs`, `extract` |
-| `app/services/cv_parser.py` | pypdf text extraction, with size, type and encryption checks |
+| `app/main.py` | App factory, lifespan (DB, event bus, runner, stale-run cleanup), error handler |
+| `app/api/routes/` | `auth`, `me`, `places`, `cv`, `searches` (incl. live stream), `postings`, `how`, `health` |
+| `app/agents/orchestrator.py` | The search state machine; saves and streams results as they come |
+| `app/agents/discover.py` | Tavily -> company boards -> board APIs -> quiet checks |
+| `app/agents/requirements.py` | Nemotron Lightning extraction (batched, quotes verified, cached) + rules fallback |
+| `app/agents/profile.py`, `planner.py`, `llm_gate.py` | CV profile, query planning, the single LLM gate (budget + fallback) |
+| `app/domain/` | Pure logic: evidence checks, glossary, places, titles, years, rule extraction, matching |
+| `app/scoring/` | Match score, company score, rank key, skill summary, Gap ROI |
+| `app/services/` | `llm.py`, `tavily_client.py`, `ats.py`, `html_text.py`, `intake/`, `fakes.py` |
+| `app/db/` | SQLite engine (WAL, FKs), tables, repos |
 
 ## Errors
 
@@ -54,7 +50,9 @@ Every expected failure becomes JSON in the form `{"error": {"code", "message"}}`
 |---|---|---|
 | `missing_api_key` | 503 | `NEBIUS_API_KEY` or `TAVILY_API_KEY` is unset while `MOCK_MODE=false` |
 | `upstream_error` | 502 | Nebius or Tavily failed: bad key, unknown model ID, rate limit, timeout, invalid JSON |
-| `bad_input` | 400 | Not a PDF, the file is too large, it's encrypted, or it has no text layer |
+| `bad_input` | 400 | Wrong file type, too large, encrypted, a scan without OCR, or invalid input |
+| `unauthorized` | 401 | Missing or expired session token |
+| `not_found` | 404 | Unknown resource or another user's |
 
 ## Docker
 

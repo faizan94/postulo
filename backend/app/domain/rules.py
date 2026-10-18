@@ -94,7 +94,8 @@ def extract_requirements(text: str) -> list[Requirement]:
     """Requirements of one posting, with section-aware must/nice and verbatim quotes."""
     g = glossary()
     found: dict[str, Requirement] = {}
-    mode = "nice"  # before any header: intro text counts as nice-to-have
+    # Before any header the text is usually the company intro: only tools count (as nice).
+    mode = "intro"
     max_years: tuple[float, str, Importance] | None = None
 
     def add(req: Requirement) -> None:
@@ -127,6 +128,8 @@ def extract_requirements(text: str) -> list[Requirement]:
             importance = "must"
 
         for hit in hits:
+            if mode == "intro" and (hit.term.kind != "skill" or hit.term.type != "tech"):
+                continue  # "...ranging from Marketing, Sales, Data" is not a requirement
             quote = snippet(line, hit.start, hit.end)
             if hit.term.kind == "language":
                 add(

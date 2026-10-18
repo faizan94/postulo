@@ -238,6 +238,9 @@ class FakeBoards:
     async def jobs(self, ref: BoardRef) -> list[BoardJob] | None:
         return _boards().get((ref.ats, ref.slug))
 
+    async def fill_text(self, job: BoardJob) -> None:
+        return None
+
     async def aclose(self) -> None:
         return None
 

@@ -48,10 +48,30 @@ def _same(a: str, b: str) -> bool:
     return any(a in g and b in g for g in SYNONYMS)
 
 
+_JOIN = re.compile(r"\s*(?:&|/|\band\b|\bund\b|\+)\s*", re.I)
+
+
+def variants(title: str) -> list[str]:
+    """'Lead Data & AI Engineer' -> [itself, 'Lead Data Engineer', 'AI Engineer'].
+
+    Compound titles rarely appear verbatim on boards, so each side is matched on its own,
+    sharing the role noun ('Engineer') that comes last.
+    """
+    parts = [p for p in _JOIN.split(title) if p.strip()]
+    if len(parts) < 2:
+        return [title]
+    noun = parts[-1].split()[-1]
+    out = [title]
+    for p in parts:
+        words = p.split()
+        out.append(p if words and words[-1].lower() == noun.lower() else f"{p} {noun}")
+    return list(dict.fromkeys(out))
+
+
 def title_matches(job_title: str, wanted: list[str]) -> bool:
     job = tokens(job_title)
     job_set = set(job)
-    for w in wanted:
+    for w in [v for title in wanted for v in variants(title)]:
         want = [t for t in tokens(w) if t not in SENIORITY]
         if not want:
             continue

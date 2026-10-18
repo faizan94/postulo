@@ -17,7 +17,8 @@ from app.domain.rules import extract_requirements
 from app.schemas.common import Evidence
 from app.schemas.posting import Requirement
 
-RULES_MODEL = "rules-v1"
+EXTRACTION_VERSION = "v3"  # bump when extraction logic changes: old cache entries re-run
+RULES_MODEL = f"rules@{EXTRACTION_VERSION}"
 BATCH = 5
 MAX_TEXT_PER_POSTING = 8_000
 TYPES = {"tech", "soft", "domain", "language", "years", "degree"}
@@ -27,27 +28,56 @@ def text_hash(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+def canonical_names(name: str, req_type: str) -> list[tuple[str, str]]:
+    """Map an LLM requirement name to canonical glossary names (D2).
+
+    "Airflow/Flyte/Ray" -> [("Apache Airflow", "tech")]; "computer science degree" -> Degree.
+    Names the glossary doesn't know are kept (short), so nothing the posting asks is lost.
+    """
+    g = glossary()
+    if req_type == "degree":
+        return [("Degree", "degree")]
+    if req_type == "years":
+        return [("Experience", "years")]
+    hits = g.find(name)
+    if hits:
+        out: list[tuple[str, str]] = []
+        for h in hits:
+            t = "soft" if h.term.kind == "soft" else h.term.type
+            if (h.term.name, t) not in out:
+                out.append((h.term.name, t))
+        return out
+    return [(g.canonical(name)[:60], req_type)]
+
+
 def parse_llm_requirements(items: Any, text: str) -> list[Requirement]:
     checker = EvidenceChecker(text)
-    g = glossary()
     out: dict[str, Requirement] = {}
     for item in items if isinstance(items, list) else []:
         if not isinstance(item, dict) or not checker.check(item.get("quote")):
             continue
+        req_type = item["type"] if item.get("type") in TYPES else "tech"
         try:
-            req = Requirement(
-                name=g.canonical(str(item["name"]))[:80],
-                type=item["type"] if item.get("type") in TYPES else "tech",
-                importance="must" if item.get("importance") == "must" else "nice",
-                level=item.get("level") or None,
-                min_years=float(item["min_years"]) if item.get("min_years") is not None else None,
-                evidence=Evidence(quote=str(item["quote"])[:500]),
-            )
+            names = canonical_names(str(item["name"]), req_type)
+            reqs = [
+                Requirement(
+                    name=name,
+                    type=typ,  # type: ignore[arg-type]
+                    importance="must" if item.get("importance") == "must" else "nice",
+                    level=item.get("level") or None,
+                    min_years=float(item["min_years"])
+                    if item.get("min_years") is not None
+                    else None,
+                    evidence=Evidence(quote=str(item["quote"])[:500]),
+                )
+                for name, typ in names
+            ]
         except (ValidationError, KeyError, TypeError, ValueError):
             continue
-        old = out.get(req.name)
-        if old is None or (old.importance == "nice" and req.importance == "must"):
-            out[req.name] = req
+        for req in reqs:
+            old = out.get(req.name)
+            if old is None or (old.importance == "nice" and req.importance == "must"):
+                out[req.name] = req
     return list(out.values())
 
 
@@ -58,6 +88,8 @@ def merge(primary: list[Requirement], backup: list[Requirement]) -> list[Require
 
 def _cached(p: Posting, gate: LLMGate) -> list[Requirement] | None:
     if p.requirements is None or p.text_hash != text_hash(p.full_text):
+        return None
+    if not (p.requirements_model or "").endswith(f"@{EXTRACTION_VERSION}"):
         return None
     if p.requirements_model == RULES_MODEL and gate.usable:
         return None  # upgrade rule-based results once the LLM is available
@@ -103,7 +135,10 @@ async def ensure_requirements(
         for p in batch:
             rules = extract_requirements(p.full_text)
             if llm_reqs.get(p.id):
-                reqs, model = merge(llm_reqs[p.id], rules), gate.model_label
+                reqs, model = (
+                    merge(llm_reqs[p.id], rules),
+                    f"{gate.model_label}@{EXTRACTION_VERSION}",
+                )
             else:
                 reqs, model = rules, RULES_MODEL
             p.requirements = [r.model_dump(mode="json") for r in reqs]

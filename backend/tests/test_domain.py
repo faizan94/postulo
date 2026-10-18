@@ -231,3 +231,43 @@ def test_summary_and_learn_next():
 def test_skill_match_round_trip():
     m = SkillMatch(requirement=_req("Python"), status="have", cv_evidence=ev("Python"))
     assert SkillMatch.model_validate(m.model_dump(mode="json")) == m
+
+
+def test_llm_requirement_names_are_canonicalised():
+    from app.agents.requirements import parse_llm_requirements
+
+    text = "Experience with Airflow/Flyte/Ray. A computer science degree. Fluent German."
+    reqs = parse_llm_requirements(
+        [
+            {
+                "name": "Airflow/Flyte/Ray",
+                "type": "tech",
+                "importance": "must",
+                "quote": "Experience with Airflow/Flyte/Ray",
+            },
+            {
+                "name": "computer science degree",
+                "type": "degree",
+                "importance": "nice",
+                "quote": "A computer science degree",
+            },
+            {"name": "Fake", "type": "tech", "importance": "must", "quote": "not in the text"},
+        ],
+        text,
+    )
+    names = {r.name: r for r in reqs}
+    assert "Apache Airflow" in names and names["Apache Airflow"].importance == "must"
+    assert "Degree" in names and "Fake" not in names  # unquotable items are dropped (G2)
+
+
+def test_compound_titles_match_each_side():
+    from app.domain.titles import variants
+
+    assert variants("Lead Data & AI Engineer") == [
+        "Lead Data & AI Engineer",
+        "Lead Data Engineer",
+        "AI Engineer",
+    ]
+    assert title_matches("Senior AI Engineer (m/w/d)", ["Lead Data & AI Engineer"])
+    assert title_matches("Data Engineer", ["Lead Data & AI Engineer"])
+    assert not title_matches("Data Analyst", ["Lead Data & AI Engineer"])
