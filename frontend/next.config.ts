@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
+    // tw-animate-css only exposes a "style" export; Turbopack does not resolve that.
+    resolveAlias: {
+      "tw-animate-css": "./node_modules/tw-animate-css/dist/tw-animate.css",
+    },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],
