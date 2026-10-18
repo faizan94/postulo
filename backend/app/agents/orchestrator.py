@@ -5,6 +5,7 @@ inside the user's country) -> requirements -> match + score (cards stream) -> co
 -> rank + skill summary + Gap ROI. Results are saved as they come, so a reload never loses them.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -38,6 +39,8 @@ MIN_GOOD = 5
 MAX_ROUNDS = 3
 MAX_CANDIDATES = 25
 MIN_RELATED_FIT = 25  # a related-role job must fit the profile at least this well (D20)
+REQ_CHUNK = 5  # postings per requirements LLM call
+REQ_PARALLEL = 3  # requirement batches running at once
 STAGE_TEXT = {
     "planning": "Planning your search",
     "searching": "Searching job boards",
@@ -197,6 +200,7 @@ async def run_search(ctx: RunContext) -> None:
                 ctx.settings.recent_days,
                 set(candidates),
                 related=related,
+                home_country=profile.place.country_code if profile.place else None,
             )
             rec.drop(dropped)
             for c in kept:
@@ -228,42 +232,44 @@ async def run_search(ctx: RunContext) -> None:
             await s.commit()
             # 5. Requirements + match, streaming each card
             await rec.stage("matching")
-            reqs = await ensure_requirements(rows, gate)
             search = await s.get(Search, ctx.search_id)
             assert search is not None
             search.note = note
             matched: dict[int, list[SkillMatch]] = {}
             kind_of = {p.id: c.title_match for c, p in zip(chosen, rows, strict=True)}
-            for p in rows:
-                skills = match(profile, reqs[p.id])
-                ms = score(skills, profile)
-                if kind_of[p.id] == "related" and (ms.value or 0) < MIN_RELATED_FIT:
-                    rec.drop(
-                        [
-                            Dropped(
-                                p.title,
-                                None,
-                                p.url,
-                                f"related role with low fit ({ms.value or 0}%)",
-                            )
-                        ]
+            # Requirement extraction is the slow step (an LLM call per 5 postings): run up to
+            # REQ_PARALLEL batches at once and score/stream each batch as soon as it is ready.
+            sem = asyncio.Semaphore(REQ_PARALLEL)
+
+            async def extract(chunk: list[Posting]) -> tuple[list[Posting], dict[int, Any]]:
+                async with sem:
+                    return chunk, await ensure_requirements(chunk, gate)
+
+            chunks = [rows[i : i + REQ_CHUNK] for i in range(0, len(rows), REQ_CHUNK)]
+            for fut in asyncio.as_completed([extract(c) for c in chunks]):
+                chunk, chunk_reqs = await fut
+                for p in chunk:
+                    skills = match(profile, chunk_reqs[p.id])
+                    ms = score(skills, profile)
+                    if kind_of[p.id] == "related" and (ms.value or 0) < MIN_RELATED_FIT:
+                        reason = f"related role with low fit ({ms.value or 0}%)"
+                        rec.drop([Dropped(p.title, None, p.url, reason)])
+                        continue
+                    matched[p.id] = skills
+                    breakdown = {
+                        "match": ms.model_dump(mode="json"),
+                        "skills": [m.model_dump(mode="json") for m in skills],
+                        "title_match": kind_of[p.id],
+                    }
+                    await searches_repo.upsert_result(s, ctx.search_id, p.id, ms.value, breakdown)
+                    await s.commit()
+                    result = await searches_repo.get_result(s, ctx.search_id, p.id)
+                    company = await postings_repo.get_company(s, p.company_id)
+                    assert result is not None
+                    card = presenters.job_card(result, p, company)
+                    ctx.bus.publish(
+                        ctx.search_id, {"type": "job", "card": card.model_dump(mode="json")}
                     )
-                    continue
-                matched[p.id] = skills
-                breakdown = {
-                    "match": ms.model_dump(mode="json"),
-                    "skills": [m.model_dump(mode="json") for m in skills],
-                    "title_match": kind_of[p.id],
-                }
-                await searches_repo.upsert_result(s, ctx.search_id, p.id, ms.value, breakdown)
-                await s.commit()
-                result = await searches_repo.get_result(s, ctx.search_id, p.id)
-                company = await postings_repo.get_company(s, p.company_id)
-                assert result is not None
-                card = presenters.job_card(result, p, company)
-                ctx.bus.publish(
-                    ctx.search_id, {"type": "job", "card": card.model_dump(mode="json")}
-                )
             rec.log(
                 "matching",
                 f"Scored {len(rows)} jobs",

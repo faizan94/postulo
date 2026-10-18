@@ -93,29 +93,32 @@ class Glossary:
         ]
 
     def find(self, line: str) -> list[Hit]:
-        """All glossary terms on one line (first hit per term)."""
-        hits: list[Hit] = []
+        """All glossary terms on one line, one hit per term.
+
+        Longest match wins: inside "React Native" there is no separate "React", and
+        "Apache Spark" is not also "Spark". A later standalone mention still counts.
+        """
         lower = line.lower()
+        spans: list[Hit] = []
         for term in self.terms:
-            m = term.ci.search(line) if term.ci else None
-            if m is None and term.cs is not None:
-                cm = term.cs.search(line)
-                if cm and any(c in lower for c in term.context):
-                    m = cm
-            if m is not None:
-                hits.append(Hit(term, m.start(), m.end()))
-        # Longest match wins: "React Native" is not also "React"; "Apache Spark" not "Spark".
-        return [
-            h
-            for h in hits
-            if not any(
-                o is not h
-                and o.start <= h.start
-                and h.end <= o.end
-                and (o.end - o.start) > (h.end - h.start)
-                for o in hits
+            found = list(term.ci.finditer(line)) if term.ci else []
+            if not found and term.cs is not None and any(c in lower for c in term.context):
+                found = list(term.cs.finditer(line))
+            spans += [Hit(term, m.start(), m.end()) for m in found]
+
+        def inside_longer(h: Hit) -> bool:
+            return any(
+                o.start <= h.start and h.end <= o.end and (o.end - o.start) > (h.end - h.start)
+                for o in spans
             )
-        ]
+
+        hits: list[Hit] = []
+        seen: set[str] = set()
+        for h in sorted(spans, key=lambda x: x.start):
+            if h.term.name not in seen and not inside_longer(h):
+                seen.add(h.term.name)
+                hits.append(h)
+        return hits
 
     def canonical(self, name: str) -> str:
         """Canonical name for a known alias (any case/spelling), else the input, tidied."""

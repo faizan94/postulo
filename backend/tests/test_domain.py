@@ -225,10 +225,10 @@ def test_summary_and_learn_next():
         match(prof, [_req("Kafka"), _req("Docker", "nice"), _req("Spark")]),
     ]
     summ = {s.skill: s for s in skill_summary(jobs)}
-    assert summ["Kafka"].demand == 2 and summ["Kafka"].user_status == "missing"
+    assert summ["Apache Kafka"].demand == 2 and summ["Apache Kafka"].user_status == "missing"
     assert summ["Python"].user_status == "have"
     top = learn_next(jobs, prof)
-    assert top[0].skill == "Kafka" and top[0].jobs_improved == 2 and top[0].unlocks == 2
+    assert top[0].skill == "Apache Kafka" and top[0].jobs_improved == 2 and top[0].unlocks == 2
 
 
 def test_skill_match_round_trip():

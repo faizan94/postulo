@@ -12,6 +12,7 @@ from typing import Protocol
 
 from app.agents.planner import Query
 from app.domain.places import JobLocation, places
+from app.domain.remote import remote_ok_for
 from app.domain.titles import match_kind
 from app.schemas.common import Place
 from app.services.ats import ATS_DOMAINS, BoardJob, BoardRef, detect
@@ -118,6 +119,7 @@ async def expand(
     seen_urls: set[str],
     today: date | None = None,
     related: list[str] | None = None,
+    home_country: str | None = None,
 ) -> tuple[list[Candidate], list[Dropped]]:
     today = today or date.today()
     cutoff = today - timedelta(days=recent_days)
@@ -154,6 +156,23 @@ async def expand(
                 continue
             was_found = j.external_id in found_ids
             loc = JobLocation(j.location_text, j.country_code, j.remote)
+            onsite_wanted = [p for p in wanted if p.kind != "remote"]
+            via_remote_only = not any(places().matches(loc, p) for p in onsite_wanted)
+            if (
+                any(p.kind == "remote" for p in wanted)
+                and via_remote_only
+                and not remote_ok_for(loc, home_country)
+            ):
+                if was_found or kind == "exact":
+                    dropped.append(
+                        Dropped(
+                            j.title,
+                            j.company,
+                            j.url,
+                            f"remote, but only for another country: {j.location_text}",
+                        )
+                    )
+                continue
             if not places().matches_any(loc, wanted):
                 if was_found:
                     dropped.append(

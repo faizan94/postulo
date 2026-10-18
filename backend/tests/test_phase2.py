@@ -102,3 +102,16 @@ def test_cv_text_survives_new_pdf_reader():
     r = asyncio.run(extract(make_settings(), filename="cv.pdf", data=text_pdf(CV_TEXT)))
     assert r.method in ("pypdf-layout", "pdfium", "pypdf-plain")
     assert "Apache Airflow" in r.text and not r.ocr_used
+
+
+def test_remote_jobs_must_be_open_to_the_users_country():
+    from app.domain.remote import remote_ok_for
+
+    def ok(text: str) -> bool:
+        return remote_ok_for(JobLocation(text, None, True), "DE")
+
+    assert ok("Remote") and ok("Remote - Germany") and ok("Remote - EU") and ok("Remote, EMEA")
+    assert ok("Remote (worldwide)")
+    assert not ok("Senior AI Engineer - US, Remote") and not ok("Remote (Anywhere in the U.S.)")
+    assert not ok("Remote - United States") and not ok("Remote - Canada")
+    assert remote_ok_for(JobLocation("Remote - US", None, True), None)  # unknown home: keep

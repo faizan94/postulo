@@ -1,8 +1,14 @@
+# Keep the build context small and never bake secrets into the image.
 node_modules
 .next
 out
 .env
 .env.*
 npm-debug.log*
+*.tsbuildinfo
+data/
+*.db
+coverage
 Dockerfile
 .dockerignore
+.git

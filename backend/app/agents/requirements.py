@@ -30,8 +30,8 @@ def text_hash(text: str) -> str:
 
 
 _PAREN = re.compile(r"\([^)]*\)")
-_AND = re.compile(r"\s*(?:,|;|&|and|und|\s\+\s)\s*", re.I)
-_ALT = re.compile(r"\s*(?:/|\||or|oder)\s*", re.I)
+_AND = re.compile(r"\s*(?:,|;|&|\band\b|\bund\b|\s\+\s)\s*", re.I)
+_ALT = re.compile(r"\s*(?:/|\||\bor\b|\boder\b)\s*", re.I)
 
 
 def _known(part: str) -> tuple[str, str] | None:
