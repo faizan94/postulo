@@ -8,7 +8,7 @@
 
 ## 1. Goal and scope
 
-**One line:** a job seeker signs in with a name and uploads a CV. Postulo runs a first search automatically and shows the open, recent jobs that fit them best. Each job gets a **match score** (how well you fit) and a **company score** (how healthy the employer looks). A skill chart shows what to learn next.
+**One line:** a job seeker signs in with a name and uploads a CV. Postulo runs a first search automatically and shows the open, recent jobs that fit them best. Each job gets a **match score** (how well you fit) and a **company score** (how actively the employer is hiring). A skill chart shows what to learn next or add to the CV.
 
 **Tracks (assumed, confirm):** main track is Agentic Deep Research (Token Factory + Tavily); subtrack is Nemotron Agentic AI.
 
@@ -78,7 +78,7 @@ Sign in (name)
 |---|---|---|
 | Login | `/login` | A name field and a note: "No password: anyone with your name can open this account." |
 | Onboarding | `/onboarding` | 1) Upload (drag and drop) or paste. 2) Review the extracted text (editable). 3) Place question only if the CV has none. Then it starts the search and goes to the results page. |
-| Search results | `/search/[id]` | While running: progress in plain words; job cards appear as they are matched (company score shows "…" until ready). Done: skill chart at the top, "Learn next" (Gap ROI), job cards, sort toggle. |
+| Search results | `/search/[id]` | While running: progress in plain words; job cards appear as they are matched (company score shows "…" until ready). Done: skill chart at the top, "Learn next or add to your CV" (Gap ROI, D30), job cards, sort toggle. |
 | Job detail | `/search/[id]/job/[postingId]` | Match score with breakdown, company score with sources, skills you have and are missing (color + icon), the full post text with skills highlighted, and the apply button. |
 | New search | `/new-search` | CV version picker (by date) or upload new, titles (chips), places (picker), Run. Prefilled from the defaults. |
 | History | `/history` | Past searches (date, titles, places) with Open and Re-run. |
@@ -351,17 +351,17 @@ The weights and caps are starting values. Tune them in M3 on real postings and r
 | Signal group | Points | Source | When |
 |---|---|---|---|
 | Hiring activity | 0–50 | Open roles on their board and how recent the newest one is | Core (board-API companies only) |
-| Basics | 0–20 | Own website found; size stated on the site or in JSON-LD | Core |
+| Basics | 0–20 | Careers site on the company's own domain (company size: not built) | Core |
 | Stability news, last 12 months | 0–30 | Tavily news, each article classified positive, negative or neutral with a quote and link | Stretch |
 
 - **Not enough data:** if the hiring signal is missing (the company isn't on a supported board) and there is no news, the score is `null` with band `not_enough_data`. Otherwise the score is scaled to 0–100 over the groups that have data.
 - **Bands:** 70+ strong, 40–69 okay, below 40 weak.
-- **Display:** while it is still computing, the band is `pending`. Sources are listed on the job detail page.
+- **Display:** while it is still computing, the band is `pending`. Sources are listed on the job detail page. The badge tooltip and the job page explain it in plain words (D29).
 
 ### 7.3 Skill summary and Gap ROI
 
 - **Skill summary:** for each canonical skill in the shown jobs, how many jobs ask for it, how many as a must-have, and the user's own status (`have`, `related` or `missing`). Sorted by demand and labelled "in these N jobs".
-- **Gap ROI:** for each missing skill of type tech, domain or language (**not** years or degree), re-run the match score as if it were `have`. Report the jobs improved, the average gain in points, and how many jobs lose a cap. Show the top 3 as "Learn next"; mark languages "takes longer". No LLM call.
+- **Gap ROI:** for each missing skill of type tech, domain or language (**not** years or degree), re-run the match score as if it were `have`. Report the jobs improved, the average gain in points, and how many jobs lose a cap. Show the top 3 as "Learn next or add to your CV" (D30); mark languages "takes longer". No LLM call.
 
 ---
 

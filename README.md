@@ -7,8 +7,8 @@ Sign in with a name, upload your CV (PDF, Word or pasted text) and Postulo runs 
 1. **Plan**: Nemotron 3.5 Super VL writes search queries from your job titles, places and skills.
 2. **Discover**: Tavily finds company job boards (Greenhouse, Lever, Ashby).
 3. **Quiet checks**: the boards' public APIs say which jobs are still open, how fresh they are and where they are. Closed, stale or wrong-place jobs are dropped silently (judges can see them in "How it works").
-4. **Match**: Nemotron 3.5 Lightning extracts each job's requirements with verbatim quotes; code checks every quote and computes the **match score** with a fixed formula. A **company score** comes from public hiring signals.
-5. **Learn next**: a skill chart across your matches and Gap ROI, the skill that would lift the most jobs.
+4. **Match**: Nemotron 3.5 Lightning extracts each job's requirements with verbatim quotes; code checks every quote and computes the **match score** with a fixed formula. A **company score** shows how actively the company is hiring (open roles, newest post, own careers site), not how well you fit.
+5. **Learn next or add to your CV**: a skill chart across your matches and Gap ROI, the skill that would lift the most jobs (you may already have it and only need to add it to your CV).
 
 If Nemotron is unavailable, grounded rule-based extraction takes over, so the app always works. See [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) and [docs/PHASE2_PLAN.md](docs/PHASE2_PLAN.md) for the plan and decision log (Phase 2 wins where they differ).
 

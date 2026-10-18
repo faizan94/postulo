@@ -1,15 +1,21 @@
 import { GraduationCap, TrendingUp } from "lucide-react";
 import type { LearnNextItem } from "@/lib/types";
 
-/** Gap ROI: which missing skill would lift the most of your matches (§7.3). */
+/**
+ * Gap ROI: which skill missing from the CV would lift the most of your matches (§7.3).
+ * "Missing" means not found in the CV, so the user may already have it and only needs to add it.
+ */
 export function LearnNext({ items }: { items: LearnNextItem[] }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <h2 className="flex items-center gap-2 font-semibold">
         <GraduationCap className="size-4 text-indigo-600" aria-hidden />
-        Learn next
+        Learn next or add to your CV
       </h2>
-      <p className="mb-4 text-sm text-zinc-500">The skills that would lift the most of these jobs.</p>
+      <p className="mb-4 text-sm text-zinc-500">
+        Skills these jobs want that aren&apos;t in your CV, top first. Already have one? Add it to
+        your CV. If not, it&apos;s worth learning.
+      </p>
       {items.length === 0 ? (
         <p className="text-sm text-zinc-500">No clear gaps. You already cover these jobs well.</p>
       ) : (

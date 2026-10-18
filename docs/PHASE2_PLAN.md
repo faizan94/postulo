@@ -43,10 +43,12 @@
 | D26 | **"Remote" means remote from your country.** A remote job is kept only if its location or title names no country, names the user's country (from the CV place), names a region containing it (Europe/EU/EMEA for Germany), or says worldwide/anywhere. "Senior AI Engineer – US" and "(Anywhere in the U.S.)" are dropped quietly for a Berlin user (`domain/remote.py`). |
 | D27 | **Requirement batches run in parallel** (3 at a time, 5 postings each) and job cards stream as each batch finishes, instead of after all of them (`orchestrator.py`, `REQ_PARALLEL`, `REQ_CHUNK`). |
 | D28 | Stored CV text also has **LinkedIn/XING profile links removed** (the account is name-only, D13). |
+| D29 | **The company score explains itself; the formula is unchanged (D7).** The card badge has a tooltip: how actively the company is hiring (not your fit, which is the match %), the score and band, and "Strong 70+ · Okay 40–69 · Weak under 40". The job page says the same in a line, shows the newest job post date, and has a "How this is calculated" expander. All copy lives in `frontend/src/lib/company.ts`, which mirrors `scoring/company_score.py`. |
+| D30 | **"Learn next" is now "Learn next or add to your CV".** A gap means "not found in your CV", so the user may already have the skill and only needs to write it down. Text only; Gap ROI is unchanged (§7.3). |
 
 ## 5. Status (18 Oct 2026)
 
-Built and verified: D19–D28. Backend: ruff, mypy and the full pytest suite pass, without network. Frontend: lint, typecheck and production build pass. Browser-tested in Chrome on real Tavily and job-board data with the team CV:
+Built and verified: D19–D30. Backend: ruff, mypy and the full pytest suite pass, without network. Frontend: lint, typecheck and production build pass. Browser-tested in Chrome on real Tavily and job-board data with the team CV:
 - The CV PDF now reads as 68 clean lines (it was 1,147 broken lines).
 - Open search turns "AI engineer, remote, Python" into AI Engineer + Remote + Python.
 - Related roles show with a badge, and US-only remote jobs are gone for a Berlin profile.
