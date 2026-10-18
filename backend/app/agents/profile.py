@@ -109,14 +109,26 @@ def profile_from_llm(data: dict[str, Any], text: str) -> Profile:
 
 
 def merge(primary: Profile, backup: Profile) -> Profile:
-    """Add rule-found items the LLM missed, so glossary skills are never lost."""
-    have = {s.name for s in primary.skills}
-    langs = {lang.name for lang in primary.languages}
+    """Add rule-found items the LLM missed, so glossary skills are never lost.
+
+    Items are de-duplicated by key, so 'React' and 'REACT' never appear twice.
+    """
+    g = glossary()
+
+    def uniq(items: list[Any]) -> list[Any]:
+        seen: set[str] = set()
+        out = []
+        for item in items:
+            k = g.key_of(item.name)
+            if k not in seen:
+                seen.add(k)
+                out.append(item)
+        return out
+
     return primary.model_copy(
         update={
-            "skills": primary.skills + [s for s in backup.skills if s.name not in have],
-            "languages": primary.languages
-            + [lg for lg in backup.languages if lg.name not in langs],
+            "skills": uniq(primary.skills + backup.skills),
+            "languages": uniq(primary.languages + backup.languages),
             "place": primary.place or backup.place,
             "target_titles": primary.target_titles or backup.target_titles,
             "headline": primary.headline or backup.headline,

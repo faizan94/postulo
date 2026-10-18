@@ -71,8 +71,10 @@
       "name": "C#",
       "type": "tech",
       "aliases": [
-        "c#",
         ".net",
+        "c sharp",
+        "c#",
+        "csharp",
         "dotnet"
       ]
     },
@@ -565,8 +567,17 @@
       "type": "tech",
       "aliases": [
         "react",
+        "react js",
         "react.js",
         "reactjs"
+      ]
+    },
+    {
+      "name": "React Native",
+      "type": "tech",
+      "aliases": [
+        "react native",
+        "react-native"
       ]
     },
     {
@@ -856,6 +867,10 @@
       "LLMs",
       "NLP",
       "Hugging Face"
+    ],
+    [
+      "React",
+      "React Native"
     ]
   ],
   "soft": [

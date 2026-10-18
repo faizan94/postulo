@@ -2,6 +2,8 @@
 
 import re
 
+from app.domain.normalize import title_tokens
+
 SENIORITY = {
     "senior",
     "sr",
@@ -33,17 +35,41 @@ STUDENT = {
     "thesis",
 }
 MANAGEMENT = {"manager", "director", "head", "vp", "chief", "leiter", "leiterin"}
-SYNONYMS = [{"engineer", "developer", "entwickler", "entwicklerin", "engineering"}]
-_NOISE = re.compile(r"\((?:[mwfdxa]\s*/\s*)+[mwfdxa]\)|\(all genders?\)|\(m/w/d\)", re.I)
+SYNONYMS = [
+    {
+        "engineer",
+        "developer",
+        "entwickler",
+        "entwicklerin",
+        "engineering",
+        "ingenieur",
+        "ingenieurin",
+        "programmer",
+        "programmierer",
+    },
+    {"data", "daten"},
+    {"analyst", "analystin", "analytiker"},
+    {"architect", "architekt", "architektin"},
+    {"scientist", "wissenschaftler"},
+    {"consultant", "berater", "beraterin"},
+    {"manager", "managerin"},
+]
 
 
 def tokens(title: str) -> list[str]:
-    t = _NOISE.sub(" ", title.lower())
-    return [w for w in re.split(r"[^\wäöüß+#]+", t) if w]
+    """Normalized title tokens (see domain/normalize.py: case, gender marks, German compounds,
+    abbreviations like 'Sr.'/'Eng', and variants like 'Front-End'/'Full Stack' are unified)."""
+    return title_tokens(title)
 
 
 def _same(a: str, b: str) -> bool:
-    if a == b or b.startswith(a) or a.startswith(b) and len(b) >= 4:
+    """Same word, a prefix of 4+ letters ('engineer' ~ 'engineering'), or a synonym.
+
+    Short words must match exactly, so 'AI' never matches 'Airline'.
+    """
+    if a == b:
+        return True
+    if (len(a) >= 4 and b.startswith(a)) or (len(b) >= 4 and a.startswith(b)):
         return True
     return any(a in g and b in g for g in SYNONYMS)
 

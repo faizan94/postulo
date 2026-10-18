@@ -7,6 +7,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from app.domain.normalize import key as norm_key
+
 TermKind = Literal["skill", "soft", "language"]
 
 _DATA = Path(__file__).parent / "data" / "glossary.json"
@@ -29,10 +31,20 @@ class Hit:
     end: int
 
 
+_SEP = re.compile(r"(?<=\w)[\s.\-/]+(?=\w)")
+
+
+def _flexible(alias: str) -> str:
+    """Regex for an alias where inner separators are optional: 'node.js' also finds 'Node JS',
+    'NodeJS'; 'power bi' finds 'PowerBI'; 'scikit-learn' finds 'scikit learn'."""
+    parts = _SEP.split(alias)
+    return r"[\s.\-/]?".join(re.escape(p) for p in parts)
+
+
 def _ci_pattern(aliases: list[str]) -> re.Pattern[str] | None:
     if not aliases:
         return None
-    alt = "|".join(re.escape(a) for a in sorted(aliases, key=len, reverse=True))
+    alt = "|".join(_flexible(a) for a in sorted(aliases, key=len, reverse=True))
     return re.compile(rf"(?<![\w])(?:{alt})(?![\w])", re.IGNORECASE)
 
 
@@ -64,8 +76,9 @@ class Glossary:
                         context=tuple(c.lower() for c in entry.get("context", [])),
                     )
                 )
-                for a in [name.lower(), *aliases, *entry.get("cs_aliases", [])]:
-                    self._canon[a.lower()] = name
+                for a in [name, *aliases, *entry.get("cs_aliases", [])]:
+                    self._canon.setdefault(norm_key(a), name)
+        self._by_name: dict[str, Term] = {t.name: t for t in self.terms}
         self._related: dict[str, set[str]] = {}
         for group in data["related"]:  # type: ignore[attr-defined]
             for name in group:
@@ -91,18 +104,39 @@ class Glossary:
                     m = cm
             if m is not None:
                 hits.append(Hit(term, m.start(), m.end()))
-        return hits
+        # Longest match wins: "React Native" is not also "React"; "Apache Spark" not "Spark".
+        return [
+            h
+            for h in hits
+            if not any(
+                o is not h
+                and o.start <= h.start
+                and h.end <= o.end
+                and (o.end - o.start) > (h.end - h.start)
+                for o in hits
+            )
+        ]
 
     def canonical(self, name: str) -> str:
-        """Canonical name for a known alias, else the input with tidy spacing."""
-        key = " ".join(name.split()).lower()
-        return self._canon.get(key, " ".join(name.split()))
+        """Canonical name for a known alias (any case/spelling), else the input, tidied."""
+        return self._canon.get(norm_key(name), " ".join(name.split()))
+
+    def term(self, name: str) -> Term | None:
+        """The glossary entry for any spelling of a name ('REACT', 'react.js' -> React)."""
+        return self._by_name.get(self.canonical(name))
+
+    def is_known(self, name: str) -> bool:
+        return norm_key(name) in self._canon
+
+    def key_of(self, name: str) -> str:
+        """The comparison key of a skill: same key = same skill (D2, tokenized form)."""
+        return norm_key(self.canonical(name))
 
     def is_related(self, a: str, b: str) -> bool:
-        return b in self._related.get(a, set())
+        return self.canonical(b) in self._related.get(self.canonical(a), set())
 
     def related_to(self, name: str) -> set[str]:
-        return set(self._related.get(name, set()))
+        return set(self._related.get(self.canonical(name), set()))
 
     def find_titles(self, text: str) -> list[str]:
         """Known job titles in order of first appearance."""

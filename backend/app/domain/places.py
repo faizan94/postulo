@@ -11,6 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from app.domain.normalize import fold, spelling_variants
 from app.schemas.common import Place
 
 _DATA = Path(__file__).parent / "data" / "places.json"
@@ -31,19 +32,30 @@ def _word(alias: str) -> re.Pattern[str]:
     return re.compile(rf"(?<![\w]){re.escape(alias)}(?![\w])", re.IGNORECASE)
 
 
+def _variants(names: list[str]) -> list[str]:
+    """Every spelling of each name: 'München' -> münchen, munchen, muenchen (tokenized form)."""
+    out: list[str] = []
+    for n in names:
+        for v in sorted(spelling_variants(n)):
+            if v not in out:
+                out.append(v)
+    return out
+
+
+def _pats(names: list[str], min_len: int = 0) -> list[re.Pattern[str]]:
+    return [_word(v) for v in _variants(names) if len(v) > min_len]
+
+
 class Places:
     def __init__(self, data: dict[str, Any]) -> None:
         self.countries: dict[str, dict[str, Any]] = {c["code"]: c for c in data["countries"]}
         self.cities: list[dict[str, Any]] = data["cities"]
         self.regions: dict[str, dict[str, Any]] = {r["name"]: r for r in data.get("regions", [])}
         self._country_pats = {
-            code: [_word(a) for a in c["aliases"] if len(a) > 2]
-            for code, c in self.countries.items()
+            code: _pats([c["name"], *c["aliases"]], min_len=2) for code, c in self.countries.items()
         }
-        self._city_pats = [(c, [_word(a) for a in c["aliases"]]) for c in self.cities]
-        self._region_pats = {
-            name: [_word(a) for a in r["aliases"]] for name, r in self.regions.items()
-        }
+        self._city_pats = [(c, _pats([c["name"], *c["aliases"]])) for c in self.cities]
+        self._region_pats = {name: _pats([name, *r["aliases"]]) for name, r in self.regions.items()}
 
     def all_places(self) -> list[Place]:
         out = [REMOTE]
@@ -56,17 +68,20 @@ class Places:
         return out
 
     def _aliases(self, p: Place) -> list[str]:
+        """Folded spellings of a place, for typed search and resolve."""
         if p.kind == "remote":
-            return ["remote", "anywhere remote"]
-        if p.kind == "region":
-            return [p.name.casefold(), *self.regions[p.name]["aliases"]]
-        if p.kind == "country":
-            return [p.name.casefold(), *self.countries[p.country_code or ""]["aliases"]]
-        city = next(c for c in self.cities if c["name"] == p.name)
-        return [p.name.casefold(), *city["aliases"]]
+            names = ["remote", "anywhere remote"]
+        elif p.kind == "region":
+            names = [p.name, *self.regions[p.name]["aliases"]]
+        elif p.kind == "country":
+            names = [p.name, *self.countries[p.country_code or ""]["aliases"]]
+        else:
+            city = next(c for c in self.cities if c["name"] == p.name)
+            names = [p.name, *city["aliases"]]
+        return [fold(v) for v in _variants(names)]
 
     def search(self, q: str, limit: int = 10) -> list[Place]:
-        q = " ".join(q.split()).casefold()
+        q = fold(q)
         places = self.all_places()
         if not q:
             by_name = {p.name: p for p in places}
@@ -77,7 +92,7 @@ class Places:
 
     def resolve(self, name: str) -> Place:
         """A typed place -> the known place with that exact name/alias, else a custom city."""
-        q = " ".join(name.split()).casefold()
+        q = fold(name)
         for p in self.all_places():
             if q in self._aliases(p):
                 return p
