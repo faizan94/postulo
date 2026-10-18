@@ -7,6 +7,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import StreamingResponse
 
+from app.agents.intent import parse_search
 from app.agents.orchestrator import RunContext, run_search
 from app.api import presenters
 from app.api.deps import SessionDep, UserDep, authenticate, get_bus, get_db, get_runner
@@ -17,7 +18,14 @@ from app.db.tables import User
 from app.errors import BadInputError
 from app.events import EventBus, sse
 from app.runner import SearchRunner
-from app.schemas.search import SearchCreate, SearchCreated, SearchDetail, SearchSummary
+from app.schemas.search import (
+    SearchCreate,
+    SearchCreated,
+    SearchDetail,
+    SearchIntent,
+    SearchParseRequest,
+    SearchSummary,
+)
 from app.services.ats import BoardsService
 from app.services.fakes import FakeBoards, FakeTavily
 from app.services.tavily_client import TavilyService
@@ -48,6 +56,7 @@ async def _start(
     cv_version_id: int,
     titles: list[str],
     places: list[dict[str, Any]],
+    keywords: list[str] | None = None,
 ) -> int:
     # Build services first: a missing key fails here with a clean 503, before any DB write.
     if settings.mock_mode:
@@ -60,7 +69,7 @@ async def _start(
         cv = await cv_versions.get_owned(s, user.id, cv_version_id)
         if cv.status != "confirmed":
             raise BadInputError("Please review and confirm your CV text first.")
-        search = await searches.create(s, user.id, cv.id, titles, places)
+        search = await searches.create(s, user.id, cv.id, titles, places, keywords)
         owner = await s.get(User, user.id)
         if owner is not None:
             await users.set_defaults(s, owner, titles, places)  # D11
@@ -89,8 +98,17 @@ async def create_search(
         req.cv_version_id,
         list(req.titles),
         [p.model_dump() for p in req.places],
+        list(req.keywords),
     )
     return SearchCreated(search_id=search_id)
+
+
+@router.post("/parse", response_model=SearchIntent)
+async def parse(
+    req: SearchParseRequest, user: UserDep, settings: Annotated[Settings, Depends(get_settings)]
+) -> SearchIntent:
+    """Open search (D21): free text -> titles, places, keywords (editable in the UI)."""
+    return await parse_search(req.text, settings)
 
 
 @router.get("", response_model=list[SearchSummary])
@@ -128,7 +146,15 @@ async def rerun(
     if old.cv_version_id is None:
         raise BadInputError("The CV for this search was deleted. Start a new search.")
     new_id = await _start(
-        db, bus, runner, settings, user, old.cv_version_id, list(old.titles), list(old.places)
+        db,
+        bus,
+        runner,
+        settings,
+        user,
+        old.cv_version_id,
+        list(old.titles),
+        list(old.places),
+        list(old.keywords or []),
     )
     return SearchCreated(search_id=new_id)
 

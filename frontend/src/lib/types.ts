@@ -1,6 +1,6 @@
 // Mirrors backend/app/schemas/*.py. Change both together.
 
-export type PlaceKind = "city" | "country" | "remote";
+export type PlaceKind = "city" | "country" | "region" | "remote";
 export interface Place {
   kind: PlaceKind;
   name: string;
@@ -88,6 +88,16 @@ export interface CvDraft {
   ocr_used: boolean;
   warnings: string[];
 }
+export interface CvDetail {
+  cv_version: CvVersion;
+  profile: Profile | null;
+}
+export interface SearchIntent {
+  titles: string[];
+  places: Place[];
+  keywords: string[];
+  by_ai: boolean;
+}
 export interface CvConfirmed {
   cv_version: CvVersion;
   profile: Profile;
@@ -136,6 +146,7 @@ export interface JobCard {
   match: MatchScore;
   company_score: CompanyScore;
   top_skills: SkillMatch[];
+  related_role: boolean;
 }
 export interface PostingDetail {
   posting_id: number;
@@ -150,6 +161,7 @@ export interface PostingDetail {
   match: MatchScore;
   skills: SkillMatch[];
   company_score: CompanyScore;
+  related_role: boolean;
 }
 
 // --- searches ---
@@ -183,6 +195,8 @@ export interface SearchSummary {
   cv_version_id: number | null;
   titles: string[];
   places: Place[];
+  keywords: string[];
+  related_titles: string[];
   result_count: number;
   created_at: string;
   finished_at: string | null;

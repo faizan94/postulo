@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field, StringConstraints
 
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
 
-PlaceKind = Literal["city", "country", "remote"]
+PlaceKind = Literal["city", "country", "region", "remote"]
 
 
 class Place(BaseModel):
-    """Where to search. Picked from the fixed list behind GET /api/places (D9)."""
+    """Where to search (D9, D22). From GET /api/places, or typed (an unknown city by name)."""
 
     kind: PlaceKind
     name: ShortText

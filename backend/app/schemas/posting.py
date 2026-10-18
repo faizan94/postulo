@@ -60,6 +60,7 @@ class JobCard(BaseModel):
     match: MatchScore
     company_score: CompanyScore
     top_skills: list[SkillMatch] = Field(default_factory=list, max_length=6)
+    related_role: bool = Field(default=False, description="Same role family, not the exact title")
 
 
 class PostingDetail(BaseModel):
@@ -77,3 +78,4 @@ class PostingDetail(BaseModel):
     match: MatchScore
     skills: list[SkillMatch] = Field(default_factory=list)
     company_score: CompanyScore
+    related_role: bool = False

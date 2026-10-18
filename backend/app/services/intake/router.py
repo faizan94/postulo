@@ -1,22 +1,26 @@
-"""Pick the reader by file type: text PDF -> pypdf, .docx -> python-docx, text -> as is."""
+"""Pick the reader by file type (D1, D19).
+
+PDF -> best of pypdf-layout / pdfium / pypdf-plain; if still poor, Nemotron vision reads the
+pages. .docx -> python-docx. PNG/JPG/WebP -> Nemotron vision. Pasted text -> as is.
+"""
 
 import io
 from dataclasses import dataclass, field
 
 from docx import Document
-from pypdf import PdfReader
-from pypdf.errors import PdfReadError
 
 from app.config import Settings
 from app.errors import BadInputError
 from app.services.intake.clean_text import clean
+from app.services.intake.ocr import normalise_image, ocr_images, vision_available
+from app.services.intake.pdf import extract_pdf, render_pages, words
 
 MAX_BYTES = 10 * 1024 * 1024
-MAX_PAGES = 10
 MAX_TEXT = 20_000
-SCAN_CHARS_PER_PAGE = 100
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp")
 SCAN_MESSAGE = (
-    "This looks like a scan or photo. Please upload a text PDF or .docx, or paste the text."
+    "This looks like a scan or photo and we couldn't read it. "
+    "Please upload a text PDF or .docx, or paste the text."
 )
 
 
@@ -27,20 +31,7 @@ class ExtractResult:
     label: str
     ocr_used: bool = False
     warnings: list[str] = field(default_factory=list)
-
-
-def _pdf(data: bytes) -> str:
-    try:
-        reader = PdfReader(io.BytesIO(data))
-        if reader.is_encrypted:
-            raise BadInputError("The PDF is password-protected.")
-        pages = [p.extract_text() or "" for p in reader.pages[:MAX_PAGES]]
-    except PdfReadError as e:
-        raise BadInputError(f"Could not read the PDF: {e}") from e
-    text = "\n\n".join(p.strip() for p in pages if p.strip())
-    if len(text) < SCAN_CHARS_PER_PAGE * max(1, len(pages)):
-        raise BadInputError(SCAN_MESSAGE)
-    return text
+    method: str = ""
 
 
 def _docx(data: bytes) -> str:
@@ -57,13 +48,28 @@ def _docx(data: bytes) -> str:
     return "\n".join(parts)
 
 
-def extract(
+async def _pdf(data: bytes, settings: Settings) -> tuple[str, bool, str]:
+    """(text, ocr_used, method)."""
+    best = extract_pdf(data)
+    if not best.poor:
+        return best.text, False, best.method
+    if vision_available(settings):
+        ocr = await ocr_images(render_pages(data), settings)
+        if ocr and len(words(ocr)) >= len(words(best.text)):
+            return ocr, True, "nemotron-vision"
+    if len(best.text) < 50:
+        raise BadInputError(SCAN_MESSAGE)
+    return best.text, False, best.method
+
+
+async def extract(
     settings: Settings,
     *,
     filename: str | None = None,
     data: bytes | None = None,
     text: str | None = None,
 ) -> ExtractResult:
+    ocr_used, method = False, "text"
     if text is not None and text.strip():
         raw, source, label = text, "text", "Pasted text"
     elif data is not None:
@@ -75,25 +81,35 @@ def extract(
         lower = name.lower()
         label = name
         if data[:5] == b"%PDF-":
-            raw, source = _pdf(data), "pdf"
+            raw, ocr_used, method = await _pdf(data, settings)
+            source = "pdf"
         elif data[:2] == b"PK" and lower.endswith(".docx"):
-            raw, source = _docx(data), "docx"
+            raw, source, method = _docx(data), "docx", "python-docx"
         elif lower.endswith(".doc"):
             raise BadInputError("Old .doc files aren't supported. Save it as PDF or .docx.")
-        elif lower.endswith((".png", ".jpg", ".jpeg", ".webp")):
-            if not settings.ocr_enabled:
+        elif lower.endswith(IMAGE_EXT):
+            if not vision_available(settings):
                 raise BadInputError(SCAN_MESSAGE)
-            raise BadInputError("Image reading is not available yet.")
+            try:
+                png = normalise_image(data)
+            except ValueError as e:
+                raise BadInputError("Could not read this image.") from e
+            ocr = await ocr_images([png], settings)
+            if not ocr:
+                raise BadInputError(SCAN_MESSAGE)
+            raw, source, ocr_used, method = ocr, "image", True, "nemotron-vision"
         else:
-            raise BadInputError("Upload a PDF or .docx file, or paste the text.")
+            raise BadInputError("Upload a PDF, .docx or an image (PNG/JPG), or paste the text.")
     else:
         raise BadInputError("Upload a file or paste your CV text.")
 
     warnings: list[str] = []
+    if ocr_used:
+        warnings.append("We read this CV from the page images. Please check the text carefully.")
     cleaned = clean(raw)
     if len(cleaned) > MAX_TEXT:
         cleaned = cleaned[:MAX_TEXT]
         warnings.append("Your CV was long, so only the first 20,000 characters are used.")
     if len(cleaned) < 50:
         raise BadInputError("We found almost no text in this CV.")
-    return ExtractResult(text=cleaned, source_type=source, label=label, warnings=warnings)
+    return ExtractResult(cleaned, source, label, ocr_used, warnings, method)

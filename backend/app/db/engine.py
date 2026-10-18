@@ -18,6 +18,18 @@ def _ensure_sqlite_dir(url: str) -> None:
         Path(parsed.database).parent.mkdir(parents=True, exist_ok=True)  # type: ignore[arg-type]
 
 
+def _add_missing_columns(conn: Any) -> None:
+    """Tiny migration for SQLite: add new nullable columns to existing tables (no Alembic yet)."""
+    if conn.dialect.name != "sqlite":
+        return
+    for table in Base.metadata.sorted_tables:
+        existing = {row[1] for row in conn.exec_driver_sql(f'PRAGMA table_info("{table.name}")')}
+        for col in table.columns:
+            if col.name not in existing:
+                ddl = col.type.compile(dialect=conn.dialect)
+                conn.exec_driver_sql(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {ddl}')
+
+
 class Database:
     def __init__(self, url: str) -> None:
         _ensure_sqlite_dir(url)
@@ -37,6 +49,7 @@ class Database:
     async def create_all(self) -> None:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_add_missing_columns)
 
     async def fail_stale_searches(self) -> int:
         """Searches left 'running' by a restart can never finish: mark them failed."""

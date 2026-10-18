@@ -68,6 +68,36 @@ def variants(title: str) -> list[str]:
     return list(dict.fromkeys(out))
 
 
+def family(wanted: list[str], limit: int = 8) -> list[str]:
+    """Related role titles for the wanted titles (D20), from the glossary's role families.
+
+    'Senior AI Engineer' -> family of 'AI Engineer' (Machine Learning Engineer, LLM Engineer...).
+    """
+    from app.domain.glossary import glossary  # local: glossary imports nothing from here
+
+    g = glossary()
+    wanted_l = {w.lower() for w in wanted}
+    out: list[str] = []
+    for w in wanted:
+        bases = [w, *g.find_titles(w)]
+        for v in variants(w):
+            bases += g.find_titles(v)
+        for base in bases:
+            for r in g.related_titles(base):
+                if r.lower() not in wanted_l and r not in out:
+                    out.append(r)
+    return out[:limit]
+
+
+def match_kind(job_title: str, wanted: list[str], related: list[str]) -> str | None:
+    """'exact' (the title the user asked for), 'related' (same role family) or None."""
+    if title_matches(job_title, wanted):
+        return "exact"
+    if related and title_matches(job_title, related):
+        return "related"
+    return None
+
+
 def title_matches(job_title: str, wanted: list[str]) -> bool:
     job = tokens(job_title)
     job_set = set(job)

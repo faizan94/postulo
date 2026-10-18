@@ -87,6 +87,8 @@ class Search(Base):
     )
     titles: Mapped[list[str]] = mapped_column(JSON)
     places: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    keywords: Mapped[list[str]] = mapped_column(JSON, default=list)
+    related_titles: Mapped[list[str]] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(10), default="queued")
     stage: Mapped[str | None] = mapped_column(String(20), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)

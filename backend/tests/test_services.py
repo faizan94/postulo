@@ -98,15 +98,15 @@ def test_clean_text_strips_contacts_and_personal_lines():
     assert "03/2020 - present" in out and "2018 - 2020" in out  # dates survive
 
 
-def test_intake_pdf_docx_text_and_rejections():
+async def test_intake_pdf_docx_text_and_rejections():
     s = make_settings()
-    assert extract(s, filename="cv.pdf", data=text_pdf(CV_TEXT)).source_type == "pdf"
-    docx = extract(s, filename="cv.docx", data=docx_bytes(CV_TEXT))
+    assert (await extract(s, filename="cv.pdf", data=text_pdf(CV_TEXT))).source_type == "pdf"
+    docx = await extract(s, filename="cv.docx", data=docx_bytes(CV_TEXT))
     assert docx.source_type == "docx" and "Apache Airflow" in docx.text
-    assert extract(s, text=CV_TEXT).label == "Pasted text"
+    assert (await extract(s, text=CV_TEXT)).label == "Pasted text"
     with pytest.raises(BadInputError, match="scan"):
-        extract(s, filename="scan.pdf", data=text_pdf("hi"))
+        await extract(s, filename="scan.pdf", data=text_pdf("hi"))
     with pytest.raises(BadInputError, match=".doc"):
-        extract(s, filename="old.doc", data=b"\xd0\xcf\x11\xe0")
+        await extract(s, filename="old.doc", data=b"\xd0\xcf\x11\xe0")
     with pytest.raises(BadInputError, match="scan or photo"):
-        extract(s, filename="me.png", data=b"\x89PNG....")
+        await extract(s, filename="me.png", data=b"\x89PNG....")

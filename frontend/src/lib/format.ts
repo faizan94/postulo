@@ -31,5 +31,5 @@ export const WORKPLACE: Record<WorkplaceType, string> = {
 };
 
 export function placesLabel(places: Place[]): string {
-  return places.map((p) => p.name).join(", ");
+  return places.length ? places.map((p) => p.name).join(", ") : "Anywhere";
 }

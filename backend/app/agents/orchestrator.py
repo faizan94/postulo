@@ -20,9 +20,9 @@ from app.db.engine import Database
 from app.db.repos import postings as postings_repo
 from app.db.repos import searches as searches_repo
 from app.db.tables import CvVersion, Posting, Search, utcnow
-from app.domain.glossary import glossary
 from app.domain.matching import match
 from app.domain.places import JobLocation, places
+from app.domain.titles import family
 from app.events import EventBus
 from app.schemas.common import Place
 from app.schemas.posting import SkillMatch
@@ -37,6 +37,7 @@ log = logging.getLogger(__name__)
 MIN_GOOD = 5
 MAX_ROUNDS = 3
 MAX_CANDIDATES = 25
+MIN_RELATED_FIT = 25  # a related-role job must fit the profile at least this well (D20)
 STAGE_TEXT = {
     "planning": "Planning your search",
     "searching": "Searching job boards",
@@ -93,10 +94,11 @@ class _Recorder:
         search.usage = {"tavily_credits": self.credits, "llm_calls": llm_calls}
 
 
-def _widen(
-    wanted: list[Place], titles: list[str], tried: set[str]
-) -> tuple[list[Place], list[str], str | None]:
-    """Widening rule (Core, D9/D17): city -> its country, then related titles. Never abroad."""
+def _widen(wanted: list[Place], tried: set[str]) -> tuple[list[Place], str | None]:
+    """Widening rule (D9): city -> its country. Never abroad; Anywhere never widens.
+
+    Related roles are no longer a widening step: they are part of every search (D20).
+    """
     for p in wanted:
         wider = places().widen(p)
         if (
@@ -105,21 +107,8 @@ def _widen(
             and f"place:{wider.name}" not in tried
         ):
             tried.add(f"place:{wider.name}")
-            return (
-                [*wanted, wider],
-                titles,
-                f"Only a few matches in {p.name}, also showing {wider.name}.",
-            )
-    for t in titles:
-        extra = [r for r in glossary().related_titles(t) if r not in titles]
-        if extra and f"title:{t}" not in tried:
-            tried.add(f"title:{t}")
-            return (
-                wanted,
-                [*titles, *extra[:2]],
-                f"Also showing related roles: {', '.join(extra[:2])}.",
-            )
-    return wanted, titles, None
+            return [*wanted, wider], f"Only a few matches in {p.name}, also showing {wider.name}."
+    return wanted, None
 
 
 async def _persist(s: Any, c: Candidate) -> Posting:
@@ -167,14 +156,20 @@ async def run_search(ctx: RunContext) -> None:
             profile = Profile.model_validate(cv.profile)
             titles = list(search.titles)
             wanted = [Place.model_validate(p) for p in search.places]
+            keywords = list(search.keywords or [])
+            related = family(titles)
+            search.related_titles = related
+            await s.commit()
 
         # 1. Plan
         await rec.stage("planning")
-        queries, by_llm = await plan_queries(titles, wanted, profile, gate)
+        queries, by_llm = await plan_queries(titles, wanted, profile, gate, keywords)
         rec.log(
             "planning",
             f"{len(queries)} queries ({'Nemotron' if by_llm else 'template'})",
             queries=[q.text for q in queries],
+            places=[p.name for p in wanted] or ["Anywhere"],
+            related_roles=related,
         )
 
         candidates: dict[str, Candidate] = {}
@@ -195,7 +190,13 @@ async def run_search(ctx: RunContext) -> None:
             # 3. Expand + quiet checks
             await rec.stage("checking")
             kept, dropped = await expand(
-                d, ctx.boards, titles, wanted, ctx.settings.recent_days, set(candidates)
+                d,
+                ctx.boards,
+                titles,
+                wanted,
+                ctx.settings.recent_days,
+                set(candidates),
+                related=related,
             )
             rec.drop(dropped)
             for c in kept:
@@ -206,17 +207,16 @@ async def run_search(ctx: RunContext) -> None:
             if rec.credits >= ctx.settings.max_tavily_credits_per_run:
                 rec.log("checking", "Tavily credit budget reached; stopping search")
                 break
-            wanted2, titles2, why = _widen(wanted, titles, tried)
+            wanted2, why = _widen(wanted, tried)
             if why is None:
                 break
             new_places = [p for p in wanted2 if p not in wanted]
-            new_titles = [t for t in titles2 if t not in titles]
-            wanted, titles = wanted2, titles2
+            wanted = wanted2
             note = why
             ctx.bus.publish(ctx.search_id, {"type": "note", "message": why})
             rec.log("checking", f"Widening: {why}")
             # at most 2 extra queries per widening round, to save credits
-            queries = template_queries(new_titles or titles[:1], new_places or wanted[:1])[:2]
+            queries = template_queries(titles[:2], new_places)[:2]
 
         # 4. Read and store
         await rec.stage("reading")
@@ -233,13 +233,27 @@ async def run_search(ctx: RunContext) -> None:
             assert search is not None
             search.note = note
             matched: dict[int, list[SkillMatch]] = {}
+            kind_of = {p.id: c.title_match for c, p in zip(chosen, rows, strict=True)}
             for p in rows:
                 skills = match(profile, reqs[p.id])
                 ms = score(skills, profile)
+                if kind_of[p.id] == "related" and (ms.value or 0) < MIN_RELATED_FIT:
+                    rec.drop(
+                        [
+                            Dropped(
+                                p.title,
+                                None,
+                                p.url,
+                                f"related role with low fit ({ms.value or 0}%)",
+                            )
+                        ]
+                    )
+                    continue
                 matched[p.id] = skills
                 breakdown = {
                     "match": ms.model_dump(mode="json"),
                     "skills": [m.model_dump(mode="json") for m in skills],
+                    "title_match": kind_of[p.id],
                 }
                 await searches_repo.upsert_result(s, ctx.search_id, p.id, ms.value, breakdown)
                 await s.commit()

@@ -1,151 +1,1191 @@
 {
   "_doc": "Canonical skills with aliases (case-insensitive, word-bounded). 'cs': aliases matched case-sensitively. 'context': the line must also contain one of these words (used for ambiguous aliases such as 'CV' = Computer Vision, D2). 'related': groups whose members count as a related match (half credit).",
   "skills": [
-    {"name": "Python", "type": "tech", "aliases": ["python"]},
-    {"name": "Java", "type": "tech", "aliases": ["java"]},
-    {"name": "Kotlin", "type": "tech", "aliases": ["kotlin"]},
-    {"name": "Scala", "type": "tech", "aliases": ["scala"]},
-    {"name": "Go", "type": "tech", "aliases": ["golang"], "cs_aliases": ["Go"], "context": ["golang", "backend", "microservice", "python", "java", "rust", "kubernetes", "docker", "programming", "languages", "c++"]},
-    {"name": "Rust", "type": "tech", "aliases": ["rust"]},
-    {"name": "C++", "type": "tech", "aliases": ["c++", "cpp"]},
-    {"name": "C#", "type": "tech", "aliases": ["c#", ".net", "dotnet"]},
-    {"name": "JavaScript", "type": "tech", "aliases": ["javascript", "js", "ecmascript"]},
-    {"name": "TypeScript", "type": "tech", "aliases": ["typescript", "ts"]},
-    {"name": "Ruby", "type": "tech", "aliases": ["ruby", "ruby on rails", "rails"]},
-    {"name": "PHP", "type": "tech", "aliases": ["php", "laravel", "symfony"]},
-    {"name": "Swift", "type": "tech", "aliases": ["swift"]},
-    {"name": "R", "type": "tech", "cs_aliases": ["R"], "context": ["python", "statistic", "rstudio", "tidyverse", "matlab", "stata", "spss"]},
-    {"name": "SQL", "type": "tech", "aliases": ["sql", "relational databases", "database systems", "databases"]},
-    {"name": "PostgreSQL", "type": "tech", "aliases": ["postgresql", "postgres"]},
-    {"name": "MySQL", "type": "tech", "aliases": ["mysql", "mariadb"]},
-    {"name": "MongoDB", "type": "tech", "aliases": ["mongodb", "mongo"]},
-    {"name": "Redis", "type": "tech", "aliases": ["redis"]},
-    {"name": "Elasticsearch", "type": "tech", "aliases": ["elasticsearch", "opensearch", "elastic search"]},
-    {"name": "Snowflake", "type": "tech", "aliases": ["snowflake"]},
-    {"name": "BigQuery", "type": "tech", "aliases": ["bigquery", "big query"]},
-    {"name": "Redshift", "type": "tech", "aliases": ["redshift"]},
-    {"name": "Databricks", "type": "tech", "aliases": ["databricks"]},
-    {"name": "dbt", "type": "tech", "aliases": ["dbt"]},
-    {"name": "Apache Spark", "type": "tech", "aliases": ["spark", "pyspark", "apache spark"]},
-    {"name": "Apache Kafka", "type": "tech", "aliases": ["kafka", "apache kafka"]},
-    {"name": "Apache Airflow", "type": "tech", "aliases": ["airflow", "apache airflow"]},
-    {"name": "Dagster", "type": "tech", "aliases": ["dagster"]},
-    {"name": "Flink", "type": "tech", "aliases": ["flink"]},
-    {"name": "Hadoop", "type": "tech", "aliases": ["hadoop", "hive"]},
-    {"name": "Pandas", "type": "tech", "aliases": ["pandas"]},
-    {"name": "NumPy", "type": "tech", "aliases": ["numpy"]},
-    {"name": "scikit-learn", "type": "tech", "aliases": ["scikit-learn", "sklearn", "scikit learn"]},
-    {"name": "PyTorch", "type": "tech", "aliases": ["pytorch", "torch"]},
-    {"name": "TensorFlow", "type": "tech", "aliases": ["tensorflow", "keras"]},
-    {"name": "Hugging Face", "type": "tech", "aliases": ["hugging face", "huggingface", "transformers library"]},
-    {"name": "LLMs", "type": "domain", "aliases": ["llm", "llms", "large language model", "large language models", "genai", "generative ai", "gen ai"]},
-    {"name": "Machine Learning", "type": "domain", "aliases": ["machine learning", "ml", "maschinelles lernen"]},
-    {"name": "Deep Learning", "type": "domain", "aliases": ["deep learning"]},
-    {"name": "Computer Vision", "type": "domain", "aliases": ["computer vision", "opencv"], "cs_aliases": ["CV"], "context": ["machine learning", "deep learning", "pytorch", "tensorflow", "image", "opencv", "nlp", "ml,", "ml ", "neural"]},
-    {"name": "NLP", "type": "domain", "aliases": ["nlp", "natural language processing"]},
-    {"name": "MLOps", "type": "domain", "aliases": ["mlops", "ml ops"]},
-    {"name": "Statistics", "type": "domain", "aliases": ["statistics", "statistical", "statistik"]},
-    {"name": "Data Modeling", "type": "domain", "aliases": ["data modeling", "data modelling", "dimensional modeling", "data warehouse", "data warehousing"]},
-    {"name": "ETL", "type": "domain", "aliases": ["etl", "elt", "data pipelines", "data pipeline", "data integration"]},
-    {"name": "A/B Testing", "type": "domain", "aliases": ["a/b test", "a/b testing", "experimentation"]},
-    {"name": "Tableau", "type": "tech", "aliases": ["tableau"]},
-    {"name": "Power BI", "type": "tech", "aliases": ["power bi", "powerbi"]},
-    {"name": "Looker", "type": "tech", "aliases": ["looker"]},
-    {"name": "Excel", "type": "tech", "aliases": ["excel"]},
-    {"name": "AWS", "type": "tech", "aliases": ["aws", "amazon web services"]},
-    {"name": "Google Cloud", "type": "tech", "aliases": ["gcp", "google cloud"]},
-    {"name": "Azure", "type": "tech", "aliases": ["azure"]},
-    {"name": "Docker", "type": "tech", "aliases": ["docker", "containers", "containerization"]},
-    {"name": "Kubernetes", "type": "tech", "aliases": ["kubernetes", "k8s", "eks", "gke", "aks"]},
-    {"name": "Terraform", "type": "tech", "aliases": ["terraform", "infrastructure as code", "iac"]},
-    {"name": "Ansible", "type": "tech", "aliases": ["ansible"]},
-    {"name": "CI/CD", "type": "tech", "aliases": ["ci/cd", "continuous integration", "continuous delivery", "github actions", "gitlab ci", "jenkins"]},
-    {"name": "Git", "type": "tech", "aliases": ["git", "github", "gitlab", "version control"]},
-    {"name": "Linux", "type": "tech", "aliases": ["linux", "unix", "bash"]},
-    {"name": "Prometheus", "type": "tech", "aliases": ["prometheus", "grafana"]},
-    {"name": "Observability", "type": "domain", "aliases": ["observability", "monitoring", "datadog", "new relic"]},
-    {"name": "React", "type": "tech", "aliases": ["react", "react.js", "reactjs"]},
-    {"name": "Next.js", "type": "tech", "aliases": ["next.js", "nextjs"]},
-    {"name": "Vue", "type": "tech", "aliases": ["vue", "vue.js", "vuejs", "nuxt"]},
-    {"name": "Angular", "type": "tech", "aliases": ["angular"]},
-    {"name": "Node.js", "type": "tech", "aliases": ["node.js", "nodejs", "node"]},
-    {"name": "HTML/CSS", "type": "tech", "aliases": ["html", "css", "tailwind", "sass"]},
-    {"name": "GraphQL", "type": "tech", "aliases": ["graphql"]},
-    {"name": "REST APIs", "type": "tech", "aliases": ["rest", "restful", "rest api", "rest apis", "openapi"]},
-    {"name": "gRPC", "type": "tech", "aliases": ["grpc"]},
-    {"name": "Microservices", "type": "domain", "aliases": ["microservices", "microservice", "distributed systems"]},
-    {"name": "Django", "type": "tech", "aliases": ["django"]},
-    {"name": "FastAPI", "type": "tech", "aliases": ["fastapi"]},
-    {"name": "Flask", "type": "tech", "aliases": ["flask"]},
-    {"name": "Spring", "type": "tech", "aliases": ["spring", "spring boot"]},
-    {"name": "iOS", "type": "tech", "aliases": ["ios", "swiftui"]},
-    {"name": "Android", "type": "tech", "aliases": ["android", "jetpack compose"]},
-    {"name": "Testing", "type": "domain", "aliases": ["unit testing", "test automation", "tdd", "pytest", "jest", "cypress", "playwright"]},
-    {"name": "Security", "type": "domain", "aliases": ["security", "iso 27001", "owasp", "penetration testing"]},
-    {"name": "Agile", "type": "domain", "aliases": ["agile", "scrum", "kanban"]},
-    {"name": "Product Management", "type": "domain", "aliases": ["product management", "roadmap", "product discovery"]},
-    {"name": "UX Design", "type": "domain", "aliases": ["ux", "user experience", "user research", "figma"]},
-    {"name": "SAP", "type": "tech", "aliases": ["sap", "abap", "s/4hana"]},
-    {"name": "Salesforce", "type": "tech", "aliases": ["salesforce"]},
-    {"name": "Marketing", "type": "domain", "aliases": ["performance marketing", "seo", "sem", "growth marketing"]},
-    {"name": "Finance", "type": "domain", "aliases": ["fintech", "payments", "banking"]}
+    {
+      "name": "Python",
+      "type": "tech",
+      "aliases": [
+        "python"
+      ]
+    },
+    {
+      "name": "Java",
+      "type": "tech",
+      "aliases": [
+        "java"
+      ]
+    },
+    {
+      "name": "Kotlin",
+      "type": "tech",
+      "aliases": [
+        "kotlin"
+      ]
+    },
+    {
+      "name": "Scala",
+      "type": "tech",
+      "aliases": [
+        "scala"
+      ]
+    },
+    {
+      "name": "Go",
+      "type": "tech",
+      "aliases": [
+        "golang"
+      ],
+      "cs_aliases": [
+        "Go"
+      ],
+      "context": [
+        "golang",
+        "backend",
+        "microservice",
+        "python",
+        "java",
+        "rust",
+        "kubernetes",
+        "docker",
+        "programming",
+        "languages",
+        "c++"
+      ]
+    },
+    {
+      "name": "Rust",
+      "type": "tech",
+      "aliases": [
+        "rust"
+      ]
+    },
+    {
+      "name": "C++",
+      "type": "tech",
+      "aliases": [
+        "c++",
+        "cpp"
+      ]
+    },
+    {
+      "name": "C#",
+      "type": "tech",
+      "aliases": [
+        "c#",
+        ".net",
+        "dotnet"
+      ]
+    },
+    {
+      "name": "JavaScript",
+      "type": "tech",
+      "aliases": [
+        "javascript",
+        "js",
+        "ecmascript"
+      ]
+    },
+    {
+      "name": "TypeScript",
+      "type": "tech",
+      "aliases": [
+        "typescript",
+        "ts"
+      ]
+    },
+    {
+      "name": "Ruby",
+      "type": "tech",
+      "aliases": [
+        "ruby",
+        "ruby on rails",
+        "rails"
+      ]
+    },
+    {
+      "name": "PHP",
+      "type": "tech",
+      "aliases": [
+        "php",
+        "laravel",
+        "symfony"
+      ]
+    },
+    {
+      "name": "Swift",
+      "type": "tech",
+      "aliases": [
+        "swift"
+      ]
+    },
+    {
+      "name": "R",
+      "type": "tech",
+      "cs_aliases": [
+        "R"
+      ],
+      "context": [
+        "python",
+        "statistic",
+        "rstudio",
+        "tidyverse",
+        "matlab",
+        "stata",
+        "spss"
+      ]
+    },
+    {
+      "name": "SQL",
+      "type": "tech",
+      "aliases": [
+        "sql",
+        "relational databases",
+        "database systems",
+        "databases"
+      ]
+    },
+    {
+      "name": "PostgreSQL",
+      "type": "tech",
+      "aliases": [
+        "postgresql",
+        "postgres"
+      ]
+    },
+    {
+      "name": "MySQL",
+      "type": "tech",
+      "aliases": [
+        "mysql",
+        "mariadb"
+      ]
+    },
+    {
+      "name": "MongoDB",
+      "type": "tech",
+      "aliases": [
+        "mongodb",
+        "mongo"
+      ]
+    },
+    {
+      "name": "Redis",
+      "type": "tech",
+      "aliases": [
+        "redis"
+      ]
+    },
+    {
+      "name": "Elasticsearch",
+      "type": "tech",
+      "aliases": [
+        "elasticsearch",
+        "opensearch",
+        "elastic search"
+      ]
+    },
+    {
+      "name": "Snowflake",
+      "type": "tech",
+      "aliases": [
+        "snowflake"
+      ]
+    },
+    {
+      "name": "BigQuery",
+      "type": "tech",
+      "aliases": [
+        "bigquery",
+        "big query"
+      ]
+    },
+    {
+      "name": "Redshift",
+      "type": "tech",
+      "aliases": [
+        "redshift"
+      ]
+    },
+    {
+      "name": "Databricks",
+      "type": "tech",
+      "aliases": [
+        "databricks"
+      ]
+    },
+    {
+      "name": "dbt",
+      "type": "tech",
+      "aliases": [
+        "dbt"
+      ]
+    },
+    {
+      "name": "Apache Spark",
+      "type": "tech",
+      "aliases": [
+        "spark",
+        "pyspark",
+        "apache spark"
+      ]
+    },
+    {
+      "name": "Apache Kafka",
+      "type": "tech",
+      "aliases": [
+        "kafka",
+        "apache kafka"
+      ]
+    },
+    {
+      "name": "Apache Airflow",
+      "type": "tech",
+      "aliases": [
+        "airflow",
+        "apache airflow"
+      ]
+    },
+    {
+      "name": "Dagster",
+      "type": "tech",
+      "aliases": [
+        "dagster"
+      ]
+    },
+    {
+      "name": "Flink",
+      "type": "tech",
+      "aliases": [
+        "flink"
+      ]
+    },
+    {
+      "name": "Hadoop",
+      "type": "tech",
+      "aliases": [
+        "hadoop",
+        "hive"
+      ]
+    },
+    {
+      "name": "Pandas",
+      "type": "tech",
+      "aliases": [
+        "pandas"
+      ]
+    },
+    {
+      "name": "NumPy",
+      "type": "tech",
+      "aliases": [
+        "numpy"
+      ]
+    },
+    {
+      "name": "scikit-learn",
+      "type": "tech",
+      "aliases": [
+        "scikit-learn",
+        "sklearn",
+        "scikit learn"
+      ]
+    },
+    {
+      "name": "PyTorch",
+      "type": "tech",
+      "aliases": [
+        "pytorch",
+        "torch"
+      ]
+    },
+    {
+      "name": "TensorFlow",
+      "type": "tech",
+      "aliases": [
+        "tensorflow",
+        "keras"
+      ]
+    },
+    {
+      "name": "Hugging Face",
+      "type": "tech",
+      "aliases": [
+        "hugging face",
+        "huggingface",
+        "transformers library"
+      ]
+    },
+    {
+      "name": "LLMs",
+      "type": "domain",
+      "aliases": [
+        "llm",
+        "llms",
+        "large language model",
+        "large language models",
+        "genai",
+        "generative ai",
+        "gen ai"
+      ]
+    },
+    {
+      "name": "Machine Learning",
+      "type": "domain",
+      "aliases": [
+        "machine learning",
+        "ml",
+        "maschinelles lernen"
+      ]
+    },
+    {
+      "name": "Deep Learning",
+      "type": "domain",
+      "aliases": [
+        "deep learning"
+      ]
+    },
+    {
+      "name": "Computer Vision",
+      "type": "domain",
+      "aliases": [
+        "computer vision",
+        "opencv"
+      ],
+      "cs_aliases": [
+        "CV"
+      ],
+      "context": [
+        "machine learning",
+        "deep learning",
+        "pytorch",
+        "tensorflow",
+        "image",
+        "opencv",
+        "nlp",
+        "ml,",
+        "ml ",
+        "neural"
+      ]
+    },
+    {
+      "name": "NLP",
+      "type": "domain",
+      "aliases": [
+        "nlp",
+        "natural language processing"
+      ]
+    },
+    {
+      "name": "MLOps",
+      "type": "domain",
+      "aliases": [
+        "mlops",
+        "ml ops"
+      ]
+    },
+    {
+      "name": "Statistics",
+      "type": "domain",
+      "aliases": [
+        "statistics",
+        "statistical",
+        "statistik"
+      ]
+    },
+    {
+      "name": "Data Modeling",
+      "type": "domain",
+      "aliases": [
+        "data modeling",
+        "data modelling",
+        "dimensional modeling",
+        "data warehouse",
+        "data warehousing"
+      ]
+    },
+    {
+      "name": "ETL",
+      "type": "domain",
+      "aliases": [
+        "etl",
+        "elt",
+        "data pipelines",
+        "data pipeline",
+        "data integration"
+      ]
+    },
+    {
+      "name": "A/B Testing",
+      "type": "domain",
+      "aliases": [
+        "a/b test",
+        "a/b testing",
+        "experimentation"
+      ]
+    },
+    {
+      "name": "Tableau",
+      "type": "tech",
+      "aliases": [
+        "tableau"
+      ]
+    },
+    {
+      "name": "Power BI",
+      "type": "tech",
+      "aliases": [
+        "power bi",
+        "powerbi"
+      ]
+    },
+    {
+      "name": "Looker",
+      "type": "tech",
+      "aliases": [
+        "looker"
+      ]
+    },
+    {
+      "name": "Excel",
+      "type": "tech",
+      "aliases": [
+        "excel"
+      ]
+    },
+    {
+      "name": "AWS",
+      "type": "tech",
+      "aliases": [
+        "aws",
+        "amazon web services"
+      ]
+    },
+    {
+      "name": "Google Cloud",
+      "type": "tech",
+      "aliases": [
+        "gcp",
+        "google cloud"
+      ]
+    },
+    {
+      "name": "Azure",
+      "type": "tech",
+      "aliases": [
+        "azure"
+      ]
+    },
+    {
+      "name": "Docker",
+      "type": "tech",
+      "aliases": [
+        "docker",
+        "containers",
+        "containerization"
+      ]
+    },
+    {
+      "name": "Kubernetes",
+      "type": "tech",
+      "aliases": [
+        "kubernetes",
+        "k8s",
+        "eks",
+        "gke",
+        "aks"
+      ]
+    },
+    {
+      "name": "Terraform",
+      "type": "tech",
+      "aliases": [
+        "terraform",
+        "infrastructure as code",
+        "iac"
+      ]
+    },
+    {
+      "name": "Ansible",
+      "type": "tech",
+      "aliases": [
+        "ansible"
+      ]
+    },
+    {
+      "name": "CI/CD",
+      "type": "tech",
+      "aliases": [
+        "ci/cd",
+        "continuous integration",
+        "continuous delivery",
+        "github actions",
+        "gitlab ci",
+        "jenkins"
+      ]
+    },
+    {
+      "name": "Git",
+      "type": "tech",
+      "aliases": [
+        "git",
+        "github",
+        "gitlab",
+        "version control"
+      ]
+    },
+    {
+      "name": "Linux",
+      "type": "tech",
+      "aliases": [
+        "linux",
+        "unix",
+        "bash"
+      ]
+    },
+    {
+      "name": "Prometheus",
+      "type": "tech",
+      "aliases": [
+        "prometheus",
+        "grafana"
+      ]
+    },
+    {
+      "name": "Observability",
+      "type": "domain",
+      "aliases": [
+        "observability",
+        "monitoring",
+        "datadog",
+        "new relic"
+      ]
+    },
+    {
+      "name": "React",
+      "type": "tech",
+      "aliases": [
+        "react",
+        "react.js",
+        "reactjs"
+      ]
+    },
+    {
+      "name": "Next.js",
+      "type": "tech",
+      "aliases": [
+        "next.js",
+        "nextjs"
+      ]
+    },
+    {
+      "name": "Vue",
+      "type": "tech",
+      "aliases": [
+        "vue",
+        "vue.js",
+        "vuejs",
+        "nuxt"
+      ]
+    },
+    {
+      "name": "Angular",
+      "type": "tech",
+      "aliases": [
+        "angular"
+      ]
+    },
+    {
+      "name": "Node.js",
+      "type": "tech",
+      "aliases": [
+        "node.js",
+        "nodejs",
+        "node"
+      ]
+    },
+    {
+      "name": "HTML/CSS",
+      "type": "tech",
+      "aliases": [
+        "html",
+        "css",
+        "tailwind",
+        "sass"
+      ]
+    },
+    {
+      "name": "GraphQL",
+      "type": "tech",
+      "aliases": [
+        "graphql"
+      ]
+    },
+    {
+      "name": "REST APIs",
+      "type": "tech",
+      "aliases": [
+        "rest",
+        "restful",
+        "rest api",
+        "rest apis",
+        "openapi"
+      ]
+    },
+    {
+      "name": "gRPC",
+      "type": "tech",
+      "aliases": [
+        "grpc"
+      ]
+    },
+    {
+      "name": "Microservices",
+      "type": "domain",
+      "aliases": [
+        "microservices",
+        "microservice",
+        "distributed systems"
+      ]
+    },
+    {
+      "name": "Django",
+      "type": "tech",
+      "aliases": [
+        "django"
+      ]
+    },
+    {
+      "name": "FastAPI",
+      "type": "tech",
+      "aliases": [
+        "fastapi"
+      ]
+    },
+    {
+      "name": "Flask",
+      "type": "tech",
+      "aliases": [
+        "flask"
+      ]
+    },
+    {
+      "name": "Spring",
+      "type": "tech",
+      "aliases": [
+        "spring",
+        "spring boot"
+      ]
+    },
+    {
+      "name": "iOS",
+      "type": "tech",
+      "aliases": [
+        "ios",
+        "swiftui"
+      ]
+    },
+    {
+      "name": "Android",
+      "type": "tech",
+      "aliases": [
+        "android",
+        "jetpack compose"
+      ]
+    },
+    {
+      "name": "Testing",
+      "type": "domain",
+      "aliases": [
+        "unit testing",
+        "test automation",
+        "tdd",
+        "pytest",
+        "jest",
+        "cypress",
+        "playwright"
+      ]
+    },
+    {
+      "name": "Security",
+      "type": "domain",
+      "aliases": [
+        "security",
+        "iso 27001",
+        "owasp",
+        "penetration testing"
+      ]
+    },
+    {
+      "name": "Agile",
+      "type": "domain",
+      "aliases": [
+        "agile",
+        "scrum",
+        "kanban"
+      ]
+    },
+    {
+      "name": "Product Management",
+      "type": "domain",
+      "aliases": [
+        "product management",
+        "roadmap",
+        "product discovery"
+      ]
+    },
+    {
+      "name": "UX Design",
+      "type": "domain",
+      "aliases": [
+        "ux",
+        "user experience",
+        "user research",
+        "figma"
+      ]
+    },
+    {
+      "name": "SAP",
+      "type": "tech",
+      "aliases": [
+        "sap",
+        "abap",
+        "s/4hana"
+      ]
+    },
+    {
+      "name": "Salesforce",
+      "type": "tech",
+      "aliases": [
+        "salesforce"
+      ]
+    },
+    {
+      "name": "Marketing",
+      "type": "domain",
+      "aliases": [
+        "performance marketing",
+        "seo",
+        "sem",
+        "growth marketing"
+      ]
+    },
+    {
+      "name": "Finance",
+      "type": "domain",
+      "aliases": [
+        "fintech",
+        "payments",
+        "banking"
+      ]
+    }
   ],
   "related": [
-    ["SQL", "PostgreSQL", "MySQL"],
-    ["Snowflake", "BigQuery", "Redshift", "Databricks"],
-    ["AWS", "Google Cloud", "Azure"],
-    ["Docker", "Kubernetes"],
-    ["Apache Airflow", "Dagster"],
-    ["Apache Spark", "Flink", "Hadoop", "Databricks"],
-    ["PyTorch", "TensorFlow"],
-    ["Machine Learning", "Deep Learning", "MLOps"],
-    ["React", "Vue", "Angular", "Next.js"],
-    ["JavaScript", "TypeScript"],
-    ["Java", "Kotlin", "Scala"],
-    ["Django", "FastAPI", "Flask"],
-    ["Tableau", "Power BI", "Looker"],
-    ["Prometheus", "Observability"],
-    ["Terraform", "Ansible"],
-    ["LLMs", "NLP", "Hugging Face"]
+    [
+      "SQL",
+      "PostgreSQL",
+      "MySQL"
+    ],
+    [
+      "Snowflake",
+      "BigQuery",
+      "Redshift",
+      "Databricks"
+    ],
+    [
+      "AWS",
+      "Google Cloud",
+      "Azure"
+    ],
+    [
+      "Docker",
+      "Kubernetes"
+    ],
+    [
+      "Apache Airflow",
+      "Dagster"
+    ],
+    [
+      "Apache Spark",
+      "Flink",
+      "Hadoop",
+      "Databricks"
+    ],
+    [
+      "PyTorch",
+      "TensorFlow"
+    ],
+    [
+      "Machine Learning",
+      "Deep Learning",
+      "MLOps"
+    ],
+    [
+      "React",
+      "Vue",
+      "Angular",
+      "Next.js"
+    ],
+    [
+      "JavaScript",
+      "TypeScript"
+    ],
+    [
+      "Java",
+      "Kotlin",
+      "Scala"
+    ],
+    [
+      "Django",
+      "FastAPI",
+      "Flask"
+    ],
+    [
+      "Tableau",
+      "Power BI",
+      "Looker"
+    ],
+    [
+      "Prometheus",
+      "Observability"
+    ],
+    [
+      "Terraform",
+      "Ansible"
+    ],
+    [
+      "LLMs",
+      "NLP",
+      "Hugging Face"
+    ]
   ],
   "soft": [
-    {"name": "Communication", "aliases": ["communication skills", "communicator", "communicate", "kommunikationsstärke", "kommunikationsfähigkeit"]},
-    {"name": "Teamwork", "aliases": ["team player", "teamwork", "collaborative", "collaboration", "teamfähigkeit"]},
-    {"name": "Ownership", "aliases": ["ownership", "self-starter", "proactive", "eigenverantwortung", "eigeninitiative"]},
-    {"name": "Problem solving", "aliases": ["problem solving", "problem-solving", "analytical thinking", "analytisches denken"]},
-    {"name": "Mentoring", "aliases": ["mentoring", "mentor", "coaching"]},
-    {"name": "Stakeholder management", "aliases": ["stakeholder management", "stakeholders", "cross-functional"]},
-    {"name": "Leadership", "aliases": ["leadership", "people management", "führungserfahrung"]}
+    {
+      "name": "Communication",
+      "aliases": [
+        "communication skills",
+        "communicator",
+        "communicate",
+        "kommunikationsstärke",
+        "kommunikationsfähigkeit"
+      ]
+    },
+    {
+      "name": "Teamwork",
+      "aliases": [
+        "team player",
+        "teamwork",
+        "collaborative",
+        "collaboration",
+        "teamfähigkeit"
+      ]
+    },
+    {
+      "name": "Ownership",
+      "aliases": [
+        "ownership",
+        "self-starter",
+        "proactive",
+        "eigenverantwortung",
+        "eigeninitiative"
+      ]
+    },
+    {
+      "name": "Problem solving",
+      "aliases": [
+        "problem solving",
+        "problem-solving",
+        "analytical thinking",
+        "analytisches denken"
+      ]
+    },
+    {
+      "name": "Mentoring",
+      "aliases": [
+        "mentoring",
+        "mentor",
+        "coaching"
+      ]
+    },
+    {
+      "name": "Stakeholder management",
+      "aliases": [
+        "stakeholder management",
+        "stakeholders",
+        "cross-functional"
+      ]
+    },
+    {
+      "name": "Leadership",
+      "aliases": [
+        "leadership",
+        "people management",
+        "führungserfahrung"
+      ]
+    }
   ],
   "languages": [
-    {"name": "German", "aliases": ["german", "deutsch", "deutschkenntnisse"]},
-    {"name": "English", "aliases": ["english", "englisch", "englischkenntnisse"]},
-    {"name": "French", "aliases": ["french", "französisch"]},
-    {"name": "Spanish", "aliases": ["spanish", "spanisch"]},
-    {"name": "Dutch", "aliases": ["dutch", "niederländisch"]},
-    {"name": "Italian", "aliases": ["italian", "italienisch"]},
-    {"name": "Polish", "aliases": ["polish", "polnisch"]}
+    {
+      "name": "German",
+      "aliases": [
+        "german",
+        "deutsch",
+        "deutschkenntnisse"
+      ]
+    },
+    {
+      "name": "English",
+      "aliases": [
+        "english",
+        "englisch",
+        "englischkenntnisse"
+      ]
+    },
+    {
+      "name": "French",
+      "aliases": [
+        "french",
+        "französisch"
+      ]
+    },
+    {
+      "name": "Spanish",
+      "aliases": [
+        "spanish",
+        "spanisch"
+      ]
+    },
+    {
+      "name": "Dutch",
+      "aliases": [
+        "dutch",
+        "niederländisch"
+      ]
+    },
+    {
+      "name": "Italian",
+      "aliases": [
+        "italian",
+        "italienisch"
+      ]
+    },
+    {
+      "name": "Polish",
+      "aliases": [
+        "polish",
+        "polnisch"
+      ]
+    }
   ],
   "titles": [
-    {"name": "Data Engineer", "related": ["Analytics Engineer", "Data Platform Engineer", "Big Data Engineer"]},
-    {"name": "Analytics Engineer", "related": ["Data Engineer", "BI Engineer"]},
-    {"name": "Data Scientist", "related": ["Machine Learning Engineer", "Data Analyst"]},
-    {"name": "Data Analyst", "related": ["Business Analyst", "BI Analyst", "Analytics Engineer"]},
-    {"name": "Machine Learning Engineer", "related": ["ML Engineer", "AI Engineer", "Data Scientist"]},
-    {"name": "AI Engineer", "related": ["Machine Learning Engineer", "ML Engineer"]},
-    {"name": "Software Engineer", "related": ["Backend Engineer", "Software Developer", "Full Stack Engineer"]},
-    {"name": "Backend Engineer", "related": ["Backend Developer", "Software Engineer"]},
-    {"name": "Frontend Engineer", "related": ["Frontend Developer", "Full Stack Engineer"]},
-    {"name": "Full Stack Engineer", "related": ["Full Stack Developer", "Software Engineer"]},
-    {"name": "DevOps Engineer", "related": ["Site Reliability Engineer", "Platform Engineer", "Cloud Engineer"]},
-    {"name": "Platform Engineer", "related": ["DevOps Engineer", "Site Reliability Engineer"]},
-    {"name": "Site Reliability Engineer", "related": ["DevOps Engineer", "Platform Engineer"]},
-    {"name": "Cloud Engineer", "related": ["DevOps Engineer", "Platform Engineer"]},
-    {"name": "Mobile Engineer", "related": ["iOS Engineer", "Android Engineer"]},
-    {"name": "Product Manager", "related": ["Product Owner", "Technical Product Manager"]},
-    {"name": "Product Designer", "related": ["UX Designer", "UI Designer"]},
-    {"name": "Engineering Manager", "related": ["Team Lead", "Head of Engineering"]},
-    {"name": "QA Engineer", "related": ["Test Engineer", "Software Engineer in Test"]},
-    {"name": "Security Engineer", "related": ["Cloud Security Engineer", "Application Security Engineer"]}
+    {
+      "name": "AI Engineer",
+      "related": [
+        "Machine Learning Engineer",
+        "ML Engineer",
+        "LLM Engineer",
+        "GenAI Engineer",
+        "Generative AI Engineer",
+        "Applied AI Engineer",
+        "AI/ML Engineer",
+        "Prompt Engineer",
+        "NLP Engineer",
+        "Applied Scientist"
+      ]
+    },
+    {
+      "name": "Machine Learning Engineer",
+      "related": [
+        "ML Engineer",
+        "AI Engineer",
+        "MLOps Engineer",
+        "Applied Scientist",
+        "Deep Learning Engineer",
+        "Computer Vision Engineer",
+        "NLP Engineer"
+      ]
+    },
+    {
+      "name": "ML Engineer",
+      "related": [
+        "Machine Learning Engineer",
+        "AI Engineer",
+        "MLOps Engineer"
+      ]
+    },
+    {
+      "name": "LLM Engineer",
+      "related": [
+        "AI Engineer",
+        "GenAI Engineer",
+        "Prompt Engineer",
+        "NLP Engineer"
+      ]
+    },
+    {
+      "name": "Prompt Engineer",
+      "related": [
+        "AI Engineer",
+        "LLM Engineer",
+        "GenAI Engineer"
+      ]
+    },
+    {
+      "name": "MLOps Engineer",
+      "related": [
+        "Machine Learning Engineer",
+        "Platform Engineer",
+        "DevOps Engineer"
+      ]
+    },
+    {
+      "name": "Data Scientist",
+      "related": [
+        "Machine Learning Engineer",
+        "Applied Scientist",
+        "Data Analyst",
+        "Research Scientist"
+      ]
+    },
+    {
+      "name": "Data Engineer",
+      "related": [
+        "Analytics Engineer",
+        "Data Platform Engineer",
+        "Big Data Engineer",
+        "ETL Developer",
+        "Data Infrastructure Engineer"
+      ]
+    },
+    {
+      "name": "Analytics Engineer",
+      "related": [
+        "Data Engineer",
+        "BI Engineer",
+        "Data Analyst"
+      ]
+    },
+    {
+      "name": "Data Analyst",
+      "related": [
+        "Business Analyst",
+        "BI Analyst",
+        "Analytics Engineer",
+        "Product Analyst"
+      ]
+    },
+    {
+      "name": "Software Engineer",
+      "related": [
+        "Backend Engineer",
+        "Software Developer",
+        "Full Stack Engineer"
+      ]
+    },
+    {
+      "name": "Backend Engineer",
+      "related": [
+        "Backend Developer",
+        "Software Engineer",
+        "Platform Engineer"
+      ]
+    },
+    {
+      "name": "Frontend Engineer",
+      "related": [
+        "Frontend Developer",
+        "Full Stack Engineer",
+        "UI Engineer"
+      ]
+    },
+    {
+      "name": "Full Stack Engineer",
+      "related": [
+        "Full Stack Developer",
+        "Software Engineer",
+        "Frontend Engineer",
+        "Backend Engineer"
+      ]
+    },
+    {
+      "name": "DevOps Engineer",
+      "related": [
+        "Site Reliability Engineer",
+        "Platform Engineer",
+        "Cloud Engineer",
+        "Infrastructure Engineer"
+      ]
+    },
+    {
+      "name": "Platform Engineer",
+      "related": [
+        "DevOps Engineer",
+        "Site Reliability Engineer",
+        "Infrastructure Engineer"
+      ]
+    },
+    {
+      "name": "Site Reliability Engineer",
+      "related": [
+        "DevOps Engineer",
+        "Platform Engineer",
+        "SRE"
+      ]
+    },
+    {
+      "name": "Cloud Engineer",
+      "related": [
+        "DevOps Engineer",
+        "Platform Engineer",
+        "Cloud Architect"
+      ]
+    },
+    {
+      "name": "Mobile Engineer",
+      "related": [
+        "iOS Engineer",
+        "Android Engineer",
+        "Mobile Developer"
+      ]
+    },
+    {
+      "name": "Product Manager",
+      "related": [
+        "Product Owner",
+        "Technical Product Manager",
+        "Senior Product Manager"
+      ]
+    },
+    {
+      "name": "Product Designer",
+      "related": [
+        "UX Designer",
+        "UI Designer",
+        "UX/UI Designer"
+      ]
+    },
+    {
+      "name": "Engineering Manager",
+      "related": [
+        "Team Lead",
+        "Head of Engineering",
+        "Tech Lead"
+      ]
+    },
+    {
+      "name": "QA Engineer",
+      "related": [
+        "Test Engineer",
+        "Software Engineer in Test",
+        "Test Automation Engineer"
+      ]
+    },
+    {
+      "name": "Security Engineer",
+      "related": [
+        "Cloud Security Engineer",
+        "Application Security Engineer",
+        "Security Analyst"
+      ]
+    }
   ]
 }
