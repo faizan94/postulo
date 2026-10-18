@@ -1,7 +1,7 @@
 """Discover company boards with Tavily, expand them via board APIs, run the quiet checks.
 
 Checks (cheapest first, D5): on the company's board (open) -> fresh -> right place -> right
-title -> has text. Failures are only logged for the judge view; users never see them.
+title -> has text. Failures are only logged for the "How this search worked" page; users never see them.
 """
 
 import asyncio

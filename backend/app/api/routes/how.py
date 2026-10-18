@@ -1,4 +1,4 @@
-"""'How it works' judge view (D14): the agent trace, quiet drops and usage of one search."""
+"""'How this search worked' view (D14): the agent trace, quiet drops and usage of one search."""
 
 from fastapi import APIRouter
 

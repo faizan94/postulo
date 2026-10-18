@@ -13,15 +13,13 @@ Postulo is a **deep research agent for job seekers**. You upload a CV and Postul
 
 ---
 
-## For judges: the 60-second version
+## Highlights
 
-| Judging criterion | What to look at |
-|---|---|
-| **Technical execution (50%)** | A real multi-step agent on live data: plan → Tavily → board APIs → quiet checks → widen and search again → Nemotron extraction → code-verified quotes → code-computed scores → streamed results. A full backend test suite (no network needed), ruff + mypy clean, typed frontend, Docker, deployed on Nebius Serverless AI. It keeps working when Nemotron is down. |
-| **Creativity and wow (30%)** | **Ghost jobs vanish:** closed, stale, wrong-country postings are removed before you see them, and the "How this search worked" page shows each one with the reason. **Proof on every chip:** hover a skill and see the exact sentence from the job post and from your CV. **One-line search:** type `Sr. ML Eng remote` and it becomes *Senior Machine Learning Engineer · Remote*. **"Learn next or add to your CV":** the one skill that would lift the most of your matches. |
-| **Fit to the challenge (20%)** | Token Factory serves every model call and Tavily does every web search. The research loop is ours (sub-queries, read, check, find gaps, search again, synthesise). Every claim cites its source. Progress streams live. |
-
-**Pitch line:** *Job boards show you jobs. Postulo tells you which ones are real, why you fit, and what's missing, with proof.*
+- **Dead jobs never show up:** closed, old and wrong-country postings are removed before you see them; "How this search worked" lists each one with the reason.
+- **Proof on every skill:** hover a skill to see the exact sentence from the job post and from your CV.
+- **One-line search:** `Sr. ML Eng remote` becomes *Senior Machine Learning Engineer · Remote*.
+- **What to do next:** "Learn next or add to your CV" names the skills that would lift the most of your matches.
+- **Robust:** if Nemotron is unavailable, grounded rules take over; deployed on Nebius Serverless AI.
 
 ---
 
@@ -77,7 +75,7 @@ flowchart TD
     T["2 · Discover<br/>Tavily /search, include_domains = job boards,<br/>last month, basic depth, cached 6 h"] --> B
     B["3 · Read the boards<br/>Greenhouse · Lever · Ashby public APIs<br/>every open job, exact titles + related roles"] --> Q
     Q{"4 · Quiet checks<br/>still on the board? posted in the last 45 days?<br/>right place? remote allowed from your country?"}
-    Q -- fails --> X[("Removed quietly<br/>reason kept for the judge view")]
+    Q -- fails --> X[("Removed quietly<br/>reason shown in 'How this search worked'")]
     Q -- passes --> E{"Enough good jobs?<br/>(5 or more)"}
     E -- "no, round < 3" --> W["Widen the area<br/>city → its country, never abroad"] --> T
     E -- yes --> R["5 · Read requirements<br/>Nemotron Lightning, 5 posts per call, 3 calls in parallel<br/>each requirement must quote the post"]
@@ -180,7 +178,7 @@ Strong is 70+, Okay 40–69, Weak under 40. A board we can't read shows "Not eno
 
 ---
 
-## How it meets the track briefs
+## Track fit
 
 **Agentic Deep Research with Token Factory and Tavily**
 
@@ -243,7 +241,7 @@ All runs below used live Tavily, live job boards and Nemotron on Token Factory.
 
 ## Try it
 
-### The 3-minute judge path
+### A 3-minute tour
 
 1. Sign in with any name.
 2. Upload [docs/samples/alex_cv.pdf](docs/samples/alex_cv.pdf) (or `alex_cv.docx`) and confirm the text.
@@ -350,7 +348,7 @@ All `/api/*` routes except `/api/auth/login` and `/api/places` need `Authorizati
 | `GET` | `/api/searches/{id}/events` | Live stream (`text/event-stream`, snapshot first) |
 | `POST` | `/api/searches/{id}/rerun` | Same inputs, fresh checks |
 | `GET` | `/api/postings/{id}?search_id=` | Job detail: full post, apply link, match breakdown, company score |
-| `GET` | `/api/how/{search_id}` | Judge view: agent trace, removed postings, credits used |
+| `GET` | `/api/how/{search_id}` | "How this search worked": agent trace, removed postings, credits used |
 
 ### Project structure
 

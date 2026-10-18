@@ -1,4 +1,4 @@
-"""Searches, results, skill summary, Gap ROI and the judge view (§5.4, §7.3)."""
+"""Searches, results, skill summary, Gap ROI and the trace view (§5.4, §7.3)."""
 
 from datetime import datetime
 from typing import Any, Literal
@@ -98,7 +98,7 @@ class Usage(BaseModel):
 
 
 class HowResponse(BaseModel):
-    """GET /api/how/{search_id}: the judge view (D14)."""
+    """GET /api/how/{search_id}: the trace view (D14)."""
 
     search_id: int
     trace: list[TraceStep] = Field(default_factory=list)

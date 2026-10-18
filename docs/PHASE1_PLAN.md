@@ -20,13 +20,13 @@
 | CV input: text PDF, `.docx`, pasted text; review screen | Company news signal | Old `.doc`, LinkedIn import |
 | Saved CV versions; reuse or upload new | LLM "reflect" step (Core uses rule-based widening) | Cover letters, auto-apply |
 | Automatic first search after onboarding | Saved jobs + "closed since you saved it" | Alerts, scheduled searches |
-| New search, history, re-run | Usage stats in the judge view | Salary data, city stats |
+| New search, history, re-run | Usage stats in the trace view | Salary data, city stats |
 | LLM query planning (1 call) + rule-based widening | | Dark mode, migrations |
 | Board APIs (Greenhouse, Lever, Ashby) + quiet checks | | |
 | Match score, company score (hiring + basics), skill chart, Gap ROI | | |
 | Job detail: full post text and apply link | | |
 | Live progress stream | | |
-| "How it works" judge view (agent trace) | | |
+| "How it works" trace view (agent trace) | | |
 | Settings: titles, places, delete data, log out | | |
 
 ---
@@ -50,7 +50,7 @@ If code disagrees with this table, fix one of them. `PHASE2_PLAN.md` decisions D
 | D11 | Onboarding runs the first search automatically with the titles and place suggested from the CV, and saves them as the user's defaults. If the CV has no place, it asks one question first. | New |
 | D12 | Storage is SQLite. We store users, sessions, CV versions (cleaned text + profile), searches, results and caches, not the original file or image. Contact details and personal lines are stripped on a best-effort basis. There is a "Delete my data" button. | Replaces "CV is not stored" (UI copy must change) |
 | D13 | Login is a name only; the server returns a random token that the browser keeps until logout. Names are trimmed and case-insensitive. **Anyone who knows a name can open that account**, and the UI says so. | New |
-| D14 | Job seekers see progress in plain words. Judges get a separate **"How it works" view** with the agent trace (plans, tool calls, decisions, drops). It is reachable from a small footer link, so the main UI stays clean and the tracks' "show the trace" requirement is met. | Replaces the trace in the main UI |
+| D14 | Job seekers see progress in plain words. A separate **"How it works" view** shows the agent trace (plans, tool calls, decisions, drops). It is reachable from a small footer link, so the main UI stays clean and the tracks' "show the trace" requirement is met. | Replaces the trace in the main UI |
 | D15 | Posting text is shown as fetched, converted to plain text, never rewritten by the LLM and never rendered as raw HTML. | New |
 | D16 | **One sort key, defined only in `scoring/rank.py`:** thin postings last, then match score (high first), then postings with a known date before unknown, then newest first. The company score is shown beside it; a toggle can sort by company score instead. | New |
 | D17 | **Partly superseded by D20: related roles are part of every search; widening is places only.** The planner is bounded. The LLM writes queries as JSON; code runs them and enforces the limits (max 3 rounds, stays in the user's country, budget caps). Widening is rule-based in Core and an LLM choice in Stretch. | Replaces "widen location" as the only adaptation |
@@ -83,7 +83,7 @@ Sign in (name)
 | New search | `/new-search` | CV version picker (by date) or upload new, titles (chips), places (picker), Run. Prefilled from the defaults. |
 | History | `/history` | Past searches (date, titles, places) with Open and Re-run. |
 | Settings | `/settings` | Default titles and places, CV versions (delete), Delete my data, Log out. |
-| How it works | `/how/[id]` | Judge view: agent trace, decisions, dropped postings with reasons, credits and LLM calls used. Linked from the results footer. |
+| How it works | `/how/[id]` | Trace view: agent trace, decisions, dropped postings with reasons, credits and LLM calls used. Linked from the results footer. |
 
 A returning user lands on their latest search. (Stretch: saved jobs are re-checked in the background and closed ones are flagged.)
 
@@ -105,7 +105,7 @@ flowchart TD
   PL --> D[Discover: Tavily search on job boards]
   D --> B[Expand via board APIs: Greenhouse, Lever, Ashby]
   B --> Q[Quiet checks: open, fresh, place, real]
-  Q -->|fail| X[(Dropped, logged for judge view)]
+  Q -->|fail| X[(Dropped, logged for the trace view)]
   Q --> RD[Read full text as plain text]
   RD --> E{5+ good jobs?}
   E -->|no, round < 3| W[Widen inside the country] --> D
@@ -230,7 +230,7 @@ There are no migrations in Phase 1 (`create_all` on startup). "Delete my data" r
 | `GET /api/searches/{id}/events` | Live stream (`text/event-stream`) | See below |
 | `POST /api/searches/{id}/rerun` | Same inputs, fresh checks; returns a new `search_id` | |
 | `GET /api/postings/{id}?search_id=` | Full detail: plain post text, apply URL, match breakdown (for that search), company score + sources | |
-| `GET /api/how/{search_id}` | Judge view: trace, drops with reasons, usage | Auth required; owner only |
+| `GET /api/how/{search_id}` | Trace view: trace, drops with reasons, usage | Auth required; owner only |
 | `PUT` / `DELETE /api/saved/{posting_id}`, `GET /api/saved` | Saved jobs | Stretch |
 
 **Stream behaviour** (fixes late joins, reloads and restarts):
@@ -402,7 +402,7 @@ frontend/src/
     (app)/new-search/page.tsx
     (app)/history/page.tsx
     (app)/settings/page.tsx
-    (app)/how/[id]/page.tsx       judge view (trace)
+    (app)/how/[id]/page.tsx       trace view
   components/ui/                  shadcn: button, card, badge, input, dialog, sheet, tabs,
                                   progress, skeleton, tooltip, select, command, chart
   features/
@@ -488,7 +488,7 @@ Lanes: **BE-A** = backend data and API, **BE-B** = backend pipeline, **FE** = fr
 | | | BE-A | searches history/rerun/detail, postings detail, how endpoint, delete my data | All Core endpoints tested |
 | | | FE | skill chart, Learn next, job detail (scores, skill groups, post text with highlights, apply), new search, history, settings, how-it-works view | Full Core flow on mock |
 | **M3 Real data and tuning** | 4:00–5:00 | All | `MOCK_MODE=false`; 3 test CVs (EN PDF, DE PDF, docx); tune weights and prompts; measure credits and calls; warm caches for the demo | Real run within budget; top 5 checked by hand |
-| **M4 Demo ready** | 5:00–5:45 | All | Empty and error states, bug fixes, backup video, pitch with the architecture slide | Rehearsed twice; video recorded |
+| **M4 Demo ready** | 5:00–5:45 | All | Empty and error states, bug fixes, backup video, architecture slide | Rehearsed twice; video recorded |
 | **Stretch** | only if M2 is done on time | Any | OCR (images, scans), company news, LLM reflect, saved jobs + closed-since, usage stats in the how view | Each behind its own flag; Core still green |
 
 **If late, cut inside Core in this order:** company basics (keep hiring only) → Gap ROI (keep the skill chart) → history page (keep re-run on the results page) → LLM planning (templates only).
@@ -529,7 +529,7 @@ Version 1 was checked by an independent reviewer against the code, the project n
 
 - **Schedule:** cut to Core + Stretch to fit about 5–6 h.
 - **Ownership:** the orchestrator, event bus and fakes now belong to M0; `profile`, `glossary` and `places` moved into M1.
-- **Judge view:** the trace is a Core "How it works" page, because the tracks require it.
+- **Trace view:** the trace is a Core "How it works" page, because the tracks require it.
 - **Stream:** snapshot, replay, incremental saves, stale-run cleanup and task references.
 - **Repeatable scores:** a match cache keeps re-runs identical (D6).
 - **Budgets:** company website no longer costs Tavily; batching; news limited to the top 5.

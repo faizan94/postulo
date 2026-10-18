@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { FullPageSpinner } from "@/components/FullPageSpinner";
 import { api } from "@/lib/api";
 
-/** Judge view (D14): the agent trace, quiet drops and usage. Not linked in the main flow. */
+/** Trace view (D14): the agent trace, quiet drops and usage. Not linked in the main flow. */
 export default function HowPage() {
   const id = Number(useParams<{ id: string }>().id);
   const { data, isLoading, error } = useQuery({ queryKey: ["how", id], queryFn: () => api.how(id) });

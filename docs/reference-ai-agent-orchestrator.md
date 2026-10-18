@@ -40,7 +40,7 @@ Lead orchestrator (OpenAI AGENT_MODEL, sub-agents inherit it)
 
 | Not taken | Reason |
 |---|---|
-| **LangChain Deep Agents** (`create_deep_agent`, the `task` tool, `FilesystemBackend`) | Postulo's graph is fixed (search → verify → score), as idea.md §5 decided ("plan the graph first"). A plain async pipeline is easier to debug in a 5-hour build, has deterministic cost, and makes the "own research loop" obvious to Deep Research track judges (TECH.md §3) |
+| **LangChain Deep Agents** (`create_deep_agent`, the `task` tool, `FilesystemBackend`) | Postulo's graph is fixed (search → verify → score), as idea.md §5 decided ("plan the graph first"). A plain async pipeline is easier to debug in a 5-hour build, has deterministic cost, and makes the "own research loop" obvious (TECH.md §3) |
 | **OpenAI models** (`ChatOpenAI`, `gpt-4o-mini`) | The sponsor stack is Nemotron on Nebius Token Factory. Postulo uses the `openai` SDK only as an OpenAI-compatible client pointed at `NEBIUS_BASE_URL` |
 | **A single shared model at temperature 0.2** | Postulo splits `NEMOTRON_MODEL` (reasoning on, for scoring) from `NEMOTRON_FAST_MODEL`, and uses the Nemotron-recommended sampling (`temperature=1.0`, `top_p=0.95`) with a `chat_template_kwargs` reasoning toggle |
 | **`python-dotenv` plus module-level `load_dotenv`** | Replaced by `pydantic-settings`, which validates types and loads defaults and `.env` in one place (`app/config.py`) |

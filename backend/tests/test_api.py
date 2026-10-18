@@ -91,7 +91,7 @@ def test_search_end_to_end_with_stream_detail_how_and_rerun(mock_client):
     job = mock_client.get(f"/api/postings/{pid}?search_id={sid}", headers=h).json()
     assert job["full_text"] and job["apply_url"].startswith("https://") and job["skills"]
 
-    # judge view: trace and quiet drops (closed + stale)
+    # trace view: trace and quiet drops (closed + stale)
     how = mock_client.get(f"/api/how/{sid}", headers=h).json()
     reasons = " ".join(d["reason"] for d in how["dropped"])
     assert "closed" in reasons and "stale" in reasons and how["trace"]

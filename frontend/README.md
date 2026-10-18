@@ -2,7 +2,7 @@
 
 Next.js 16 (App Router, Cache Components), React 19, Tailwind CSS 4, shadcn/ui, Recharts, TanStack Query.
 
-Flow: **login -> onboarding (CV upload/paste -> review) -> first search runs automatically -> matches (skill chart, Learn next or add to your CV, job cards) -> job detail (scores, skills, full post, apply)**, plus New search, History, Settings and the "How it works" judge view.
+Flow: **login -> onboarding (CV upload/paste -> review) -> first search runs automatically -> matches (skill chart, Learn next or add to your CV, job cards) -> job detail (scores, skills, full post, apply)**, plus New search, History, Settings and the "How this search worked" trace view.
 
 ## Run
 
