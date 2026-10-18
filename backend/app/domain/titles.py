@@ -35,6 +35,8 @@ STUDENT = {
     "thesis",
 }
 MANAGEMENT = {"manager", "director", "head", "vp", "chief", "leiter", "leiterin"}
+# (word in the wanted title, word in the job title that makes it a different role)
+DIFFERENT_ROLE_PAIRS = [("react", "native")]
 SYNONYMS = [
     {
         "engineer",
@@ -138,6 +140,10 @@ def title_matches(job_title: str, wanted: list[str]) -> bool:
         if job_set & STUDENT and not set(want) & STUDENT:
             continue
         if job_set & MANAGEMENT and not set(want) & MANAGEMENT:
+            continue
+        # A different job that shares a word: "React Native Developer" (mobile) is not a
+        # "React Developer" (web), the same rule the skill glossary applies (D25).
+        if any(a in want and b in job_set and b not in want for a, b in DIFFERENT_ROLE_PAIRS):
             continue
         if all(any(_same(t, j) for j in job) for t in want):
             return True

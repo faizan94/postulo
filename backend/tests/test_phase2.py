@@ -150,3 +150,9 @@ def test_role_family_lookup_is_spelling_independent():
     for spelling in ["Sr. AI Eng", "AI-Engineer", "KI Ingenieur", "Lead Data & AI Engineer"]:
         assert base <= set(family([spelling], limit=20)), spelling
     assert "Software Developer" in family(["Softwareentwickler"])
+
+
+def test_react_native_is_not_react():
+    assert match_kind("Mid React Native Developer", ["React Developer"], []) is None
+    assert match_kind("Senior React Developer (m/w/d)", ["React Developer"], []) == "exact"
+    assert match_kind("React Native Engineer", ["React Native Developer"], []) == "exact"

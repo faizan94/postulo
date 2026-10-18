@@ -14,7 +14,11 @@ export function KeywordsInput({ value, onChange }: { value: string[]; onChange: 
 
   function add(raw: string) {
     const k = raw.trim().replace(/\s+/g, " ").slice(0, 40);
-    if (!k || full || value.some((v) => nameKey(v) === nameKey(k))) return;
+    if (!k || full) return;
+    if (value.some((v) => nameKey(v) === nameKey(k))) {
+      setDraft(""); // already there (same name, other spelling)
+      return;
+    }
     onChange([...value, k]);
     setDraft("");
   }

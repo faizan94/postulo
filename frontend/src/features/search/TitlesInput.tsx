@@ -22,7 +22,11 @@ export function TitlesInput({
 
   function add(title: string) {
     const t = title.trim().replace(/\s+/g, " ");
-    if (!t || full || value.some((v) => nameKey(v) === nameKey(t))) return;
+    if (!t || full) return;
+    if (value.some((v) => nameKey(v) === nameKey(t))) {
+      setDraft(""); // already there (same name, other spelling)
+      return;
+    }
     onChange([...value, t.slice(0, 80)]);
     setDraft("");
   }
