@@ -1,0 +1,46 @@
+[project]
+name = "postulo-backend"
+version = "0.1.0"
+description = "Postulo backend: AI job-application agent (FastAPI + Nemotron on Nebius + Tavily)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.143.5",
+    "httpx>=0.28.1",
+    "openai>=3.35.1",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.0",
+    "pypdf>=6.21.1",
+    "python-multipart>=0.0.32",
+    "tavily-python>=0.8.5",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = ["tests/"]
