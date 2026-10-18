@@ -51,7 +51,7 @@ export default function LoginPage() {
           className="object-cover"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-zinc-950/85 via-zinc-950/35 to-zinc-950/10"
+          className="absolute inset-0 bg-linear-to-t from-zinc-950/85 via-zinc-950/35 to-zinc-950/10"
           aria-hidden
         />
         <div className="absolute inset-x-0 bottom-0 space-y-3 p-12 text-white xl:p-16">
