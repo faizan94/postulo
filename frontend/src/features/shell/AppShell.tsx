@@ -26,7 +26,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (ready && !me) router.replace("/login");
   }, [ready, me, router]);
 
-  if (!ready || !me) return <FullPageSpinner />;
+  // Always keep `{children}` in the tree. Returning only a spinner drops page
+  // segments during SSR and trips Next.js instant-navigation validation
+  // (e.g. Route "/onboarding": Could not validate…).
+  if (!ready || !me) {
+    return (
+      <>
+        <FullPageSpinner />
+        <div hidden aria-hidden>
+          {children}
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
