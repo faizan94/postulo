@@ -114,9 +114,18 @@ class Glossary:
         return [t for _, t in sorted(found)]
 
     def related_titles(self, title: str) -> list[str]:
-        for known, related in self._title_related.items():
-            if known.lower() == title.lower():
-                return related
+        """Related titles for this role. Seniority words are ignored, so
+        'Senior Software Engineer' uses the 'Software Engineer' entry."""
+        from app.domain.titles import SENIORITY
+
+        candidates = [title]
+        stripped = " ".join(w for w in title.split() if w.lower() not in SENIORITY)
+        if stripped and stripped.lower() != title.lower():
+            candidates.append(stripped)
+        for candidate in candidates:
+            for known, related in self._title_related.items():
+                if known.lower() == candidate.lower():
+                    return related
         return []
 
 

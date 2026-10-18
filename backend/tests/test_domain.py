@@ -77,6 +77,9 @@ def test_years_merge_overlaps_and_seniority():
 
 def test_titles():
     assert title_matches("Senior Data Engineer (m/w/d)", ["Data Engineer"])
+    assert glossary().related_titles("Senior Software Engineer") == glossary().related_titles(
+        "Software Engineer"
+    )
     assert title_matches("Backend Developer", ["Backend Engineer"])
     assert not title_matches("Werkstudent Data Engineering", ["Data Engineer"])
     assert not title_matches("Data Engineering Manager", ["Data Engineer"])
