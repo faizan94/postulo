@@ -10,6 +10,7 @@ Postulo is a **deep research agent for job seekers**. You upload a CV and Postul
 | **Models** | `nvidia/Nemotron-3.5-Super-VL` (planning, CV reading, vision OCR) · `nvidia/Nemotron-3_5-Lightning` (requirements, open search), both on Nebius Token Factory |
 | **Search** | Tavily `/search` (our own research loop, not `/research`) + Greenhouse, Lever and Ashby public job-board APIs |
 | **Built** | In one day at The Delta Campus hackathon (hosted by Nebius) |
+| **Live demo** | [Open Postulo on Nebius](https://port8080-fg9tkwkgzhnjvga.tunnel.applications.uk-south2.nebius.cloud/login) (sign in with any name) |
 
 ---
 
