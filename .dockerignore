@@ -1,0 +1,18 @@
+# Build context for deploy/nebius/serverless/Dockerfile (repo root).
+# Keep it small and never send local secrets or host-built deps to Docker.
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+backend/data
+**/*.db
+**/*.db-*
+deploy/nebius/.state

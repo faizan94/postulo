@@ -54,4 +54,4 @@ Built and verified: D19–D30. Backend: ruff, mypy and the full pytest suite pas
 - Related roles show with a badge, and US-only remote jobs are gone for a Berlin profile.
 - Filters work instantly ("75%+" showed 2 of 7), and cards stream during matching.
 
-Docker: the compose stack builds and runs healthy (tested on alternate ports). Deploy: `deploy/nebius/` holds a one-VM kit (Caddy + compose). Its scripts pass syntax checks; it has not been run against a real Nebius project yet.
+Docker: the compose stack builds and runs healthy (tested on alternate ports). Deploy: `deploy/nebius/` deploys the app as one Nebius Serverless AI endpoint (one image, nginx in front of FastAPI and Next.js); it has been deployed successfully. The earlier one-VM kit (Caddy + compose) was replaced by it.

@@ -200,7 +200,7 @@ sequenceDiagram
     A-->>B: done
 ```
 
-**Deploy:** one Nebius AI Cloud VM runs the same Docker images behind Caddy on a single origin (`/api` → backend, everything else → frontend). See [deploy/nebius/README.md](deploy/nebius/README.md).
+**Deploy:** one Nebius Serverless AI endpoint runs the app from a single image, with nginx giving one HTTPS origin (`/api` → backend, everything else → frontend). See [Deploy on Nebius](#deploy-on-nebius).
 
 ---
 
@@ -327,12 +327,39 @@ On Windows, `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1` opens bot
 
 **Real searches:** in `.env`, set `MOCK_MODE=false` and fill in `NEBIUS_API_KEY` and `TAVILY_API_KEY`. List the Nemotron IDs your key can use with `cd backend && uv run python scripts/list_models.py`.
 
-**Deploy on Nebius:** [deploy/nebius/README.md](deploy/nebius/README.md) — Serverless AI endpoint (nginx, one HTTPS URL).
+### Deploy on Nebius
 
-```bash
-./deploy/nebius/build-push.sh       # or: make nebius-build
-./deploy/nebius/deploy-endpoint.sh  # or: make nebius-endpoint
-```
+One **Nebius Serverless AI endpoint** runs the whole app from one image: nginx on `:8080` sends `/api`, `/health` and `/docs` to FastAPI and everything else to Next.js, behind one managed HTTPS URL. Nemotron stays on Token Factory.
+
+**You need:** the [Nebius CLI](https://docs.nebius.com/cli/install) (logged in), Docker Desktop, `jq`, and a bash shell (macOS, Linux, WSL or Git Bash).
+
+1. **App secrets**, in the repo-root `.env`: `NEBIUS_API_KEY`, `TAVILY_API_KEY` and `MOCK_MODE=false`. The deploy script reads them from there and never prints them.
+2. **Deploy settings** (optional, the defaults work): copy the example and set `PROJECT_ID` if your CLI has no default project.
+
+   ```bash
+   cp deploy/nebius/.env.nebius.example deploy/nebius/.env.nebius
+   ```
+
+   | Variable | Default | Meaning |
+   |---|---|---|
+   | `PROJECT_ID` | `nebius config get parent-id` | Nebius project |
+   | `REGION` | `uk-south2` | Container Registry region |
+   | `SUBNET_ID` | the project's first subnet | Network for the endpoint |
+   | `ENDPOINT_NAME` | `postulo` | Endpoint name (re-deploys replace it) |
+   | `PLATFORM` / `PRESET` | `cpu-d3` / `2vcpu-8gb` | CPU is enough: models run on Token Factory |
+   | `DISK_SIZE` | `40Gi` | Endpoint disk (holds SQLite) |
+   | `REGISTRY_NAME` / `IMAGE_NAME` / `TAG` | `postulo` / `postulo` / `latest` | Image location |
+
+3. **Build and push the image, then create the endpoint:**
+
+   ```bash
+   ./deploy/nebius/build-push.sh       # or: make nebius-build
+   ./deploy/nebius/deploy-endpoint.sh  # or: make nebius-endpoint
+   ```
+
+   The second script waits until the endpoint is running and prints the URL (UI at `/`, API docs at `/docs`).
+
+**Update:** run both scripts again (the endpoint is replaced, which also clears its SQLite data). **Logs:** `nebius ai endpoint logs "$(cat deploy/nebius/.state/endpoint_id)"`. **Remove:** `./deploy/nebius/destroy-endpoint.sh` (or `make nebius-endpoint-destroy`). More notes: [deploy/nebius/README.md](deploy/nebius/README.md).
 
 ---
 
@@ -414,7 +441,8 @@ postulo/
 │   ├── features/            auth, cv, search, results, job, shell
 │   ├── components/ui/       shadcn/ui (Radix)
 │   └── lib/                 api/, sse.ts, types.ts, status.ts, company.ts, format.ts
-├── deploy/nebius/           Serverless AI deploy (build-push, endpoint, nginx image)
+├── deploy/nebius/           Serverless AI deploy: build-push, deploy/destroy endpoint,
+│                            serverless/ (all-in-one image, nginx), .env.nebius.example
 └── docs/                    PHASE1_PLAN.md, PHASE2_PLAN.md (plans + decision log), samples/
 ```
 
@@ -437,7 +465,7 @@ The scoring formulas have golden tests; domain logic (places, titles, glossary, 
 - Job sources are Greenhouse, Lever and Ashby. Companies on other systems (Workday, Personio…) aren't covered yet.
 - The company score uses hiring activity and the careers site only. The news signal is designed but not built.
 - Name-only sign-in is for a demo, not for production.
-- The Nebius deploy kit is complete and syntax-checked, but hasn't been run against a live Nebius project yet.
+- The deployed endpoint keeps SQLite on its own disk, so a re-deploy starts with an empty database.
 
 **Next**
 - More boards: one parser in `services/ats.py` plus its domain in `ATS_DOMAINS`.
@@ -451,7 +479,7 @@ The scoring formulas have golden tests; domain logic (places, titles, glossary, 
 
 - [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md): the plan, decisions D1–D18, scoring formulas.
 - [docs/PHASE2_PLAN.md](docs/PHASE2_PLAN.md): Phase 2 fixes and decisions D19–D30 (they win where they differ).
-- [deploy/nebius/README.md](deploy/nebius/README.md): deploy the backend and frontend on one Nebius VM.
+- [deploy/nebius/README.md](deploy/nebius/README.md): deploy the app on one Nebius Serverless AI endpoint.
 - [docs/reference-ai-agent-orchestrator.md](docs/reference-ai-agent-orchestrator.md): what we took from `mathcrypto/ai-agent-orchestrator`, and why.
 - [CLAUDE.md](CLAUDE.md): rules for AI coding agents in this repo.
 
