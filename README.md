@@ -10,26 +10,6 @@ Postulo is a **deep research agent for job seekers**. You upload a CV and Postul
 | **Models** | `nvidia/Nemotron-3.5-Super-VL` (planning, CV reading, vision OCR) · `nvidia/Nemotron-3_5-Lightning` (requirements, open search), both on Nebius Token Factory |
 | **Search** | Tavily `/search` (our own research loop, not `/research`) + Greenhouse, Lever and Ashby public job-board APIs |
 | **Built** | In one day at The Delta Campus hackathon (hosted by Nebius) |
-| **Demo** | _link_ |
-
----
-
-## Contents
-
-1. [For judges: the 60-second version](#for-judges-the-60-second-version)
-2. [The problem](#the-problem)
-3. [What Postulo does](#what-postulo-does)
-4. [User flow](#user-flow)
-5. [Agent flow: the research loop](#agent-flow-the-research-loop)
-6. [Grounding: the LLM proposes, code verifies](#grounding-the-llm-proposes-code-verifies)
-7. [Architecture](#architecture)
-8. [Scoring](#scoring)
-9. [How it meets the track briefs](#how-it-meets-the-track-briefs)
-10. [Measured on real data](#measured-on-real-data)
-11. [Reliability, cost, privacy](#reliability-cost-privacy)
-12. [Try it](#try-it)
-13. [Reference: env, API, structure, quality](#reference)
-14. [Limits and what's next](#limits-and-whats-next)
 
 ---
 
@@ -37,7 +17,7 @@ Postulo is a **deep research agent for job seekers**. You upload a CV and Postul
 
 | Judging criterion | What to look at |
 |---|---|
-| **Technical execution (50%)** | A real multi-step agent on live data: plan → Tavily → board APIs → quiet checks → widen and search again → Nemotron extraction → code-verified quotes → code-computed scores → streamed results. 98 backend tests (no network needed), ruff + mypy clean, typed frontend, Docker, a Nebius deploy kit. It keeps working when Nemotron is down. |
+| **Technical execution (50%)** | A real multi-step agent on live data: plan → Tavily → board APIs → quiet checks → widen and search again → Nemotron extraction → code-verified quotes → code-computed scores → streamed results. A full backend test suite (no network needed), ruff + mypy clean, typed frontend, Docker, deployed on Nebius Serverless AI. It keeps working when Nemotron is down. |
 | **Creativity and wow (30%)** | **Ghost jobs vanish:** closed, stale, wrong-country postings are removed before you see them, and the "How this search worked" page shows each one with the reason. **Proof on every chip:** hover a skill and see the exact sentence from the job post and from your CV. **One-line search:** type `Sr. ML Eng remote` and it becomes *Senior Machine Learning Engineer · Remote*. **"Learn next or add to your CV":** the one skill that would lift the most of your matches. |
 | **Fit to the challenge (20%)** | Token Factory serves every model call and Tavily does every web search. The research loop is ours (sub-queries, read, check, find gaps, search again, synthesise). Every claim cites its source. Progress streams live. |
 
@@ -127,15 +107,6 @@ The orchestrator (`agents/orchestrator.py`) runs these steps as a state machine 
 
 ## Grounding: the LLM proposes, code verifies
 
-```mermaid
-flowchart LR
-    N["Nemotron proposes<br/>a requirement or a CV skill<br/>+ a verbatim quote"] --> Q{"Is the quote really<br/>in the text?<br/>(normalised match)"}
-    Q -- no --> D["Dropped"]
-    Q -- yes --> G["Glossary maps it to a<br/>canonical skill<br/>(aliases, related groups)"]
-    G --> S["Code decides the status<br/>have · related · missing"]
-    S --> F["Fixed formula computes<br/>the score"]
-```
-
 - **No invented requirements:** a requirement without a quote that appears in the job post is dropped. The same rule applies to the CV profile.
 - **No invented numbers:** match score, company score, ranking and Gap ROI are fixed formulas in `scoring/`, pinned by golden tests. The same requirements always give the same scores.
 - **No invented freshness:** dates and "still open" come from the job board's own API, not from the model.
@@ -178,26 +149,6 @@ flowchart LR
     AG --> TF
     AG --> TV
     AG --> ATS
-```
-
-**Live streaming (why reloads never lose work):**
-
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant A as FastAPI
-    participant O as Orchestrator (background)
-    B->>A: POST /api/searches
-    A->>O: start run
-    A-->>B: { search_id }
-    B->>A: GET /api/searches/{id}/events
-    A-->>B: snapshot (everything saved so far)
-    loop each step
-        O->>A: stage · job card · company score
-        A-->>B: event
-    end
-    O->>A: done (summary, skill chart, Learn next)
-    A-->>B: done
 ```
 
 **Deploy:** one Nebius Serverless AI endpoint runs the app from a single image, with nginx giving one HTTPS origin (`/api` → backend, everything else → frontend). See [Deploy on Nebius](#deploy-on-nebius).
@@ -268,8 +219,6 @@ All runs below used live Tavily, live job boards and Nemotron on Token Factory.
 | "AI Engineer, Remote" (re-run) | 29 s, 5 jobs (Germany, UK, Remote); US-only remote jobs removed for a Berlin profile |
 | Anywhere search | 26 s, 1 Tavily credit, jobs across several countries |
 | Open search `REACT developer in München, Node JS` | React Developer · Munich · Node.js |
-| Open search `Sr. ML Eng remote` | Senior Machine Learning Engineer · Remote |
-| Filters | "75%+" showed 2 of 7 instantly |
 
 ---
 
@@ -334,22 +283,7 @@ One **Nebius Serverless AI endpoint** runs the whole app from one image: nginx o
 **You need:** the [Nebius CLI](https://docs.nebius.com/cli/install) (logged in), Docker Desktop, `jq`, and a bash shell (macOS, Linux, WSL or Git Bash).
 
 1. **App secrets**, in the repo-root `.env`: `NEBIUS_API_KEY`, `TAVILY_API_KEY` and `MOCK_MODE=false`. The deploy script reads them from there and never prints them.
-2. **Deploy settings** (optional, the defaults work): copy the example and set `PROJECT_ID` if your CLI has no default project.
-
-   ```bash
-   cp deploy/nebius/.env.nebius.example deploy/nebius/.env.nebius
-   ```
-
-   | Variable | Default | Meaning |
-   |---|---|---|
-   | `PROJECT_ID` | `nebius config get parent-id` | Nebius project |
-   | `REGION` | `uk-south2` | Container Registry region |
-   | `SUBNET_ID` | the project's first subnet | Network for the endpoint |
-   | `ENDPOINT_NAME` | `postulo` | Endpoint name (re-deploys replace it) |
-   | `PLATFORM` / `PRESET` | `cpu-d3` / `2vcpu-8gb` | CPU is enough: models run on Token Factory |
-   | `DISK_SIZE` | `40Gi` | Endpoint disk (holds SQLite) |
-   | `REGISTRY_NAME` / `IMAGE_NAME` / `TAG` | `postulo` / `postulo` / `latest` | Image location |
-
+2. **Deploy settings** (optional; the defaults work): `cp deploy/nebius/.env.nebius.example deploy/nebius/.env.nebius` and set `PROJECT_ID` if your CLI has no default project. All settings and their defaults are in [.env.nebius.example](deploy/nebius/.env.nebius.example).
 3. **Build and push the image, then create the endpoint:**
 
    ```bash
@@ -395,7 +329,6 @@ All variables live in `.env` at the repo root (see [.env.example](.env.example))
 | `MAX_TAVILY_CREDITS_PER_RUN` | `20` | Tavily credit budget per search |
 | `MAX_LLM_CALLS_PER_RUN` | `15` | Nemotron call budget per search (rules take over after) |
 | `RECENT_DAYS` | `45` | Older postings are removed quietly |
-| `POSTING_RECHECK_HOURS` / `COMPANY_CACHE_DAYS` | `24` / `30` | Reserved, not enforced yet (caches use 6 h in memory) |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/postulo.db` | SQLite file; the folder is created on startup |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed frontend origins |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
@@ -450,7 +383,7 @@ postulo/
 
 | Check | Command |
 |---|---|
-| Backend tests (98, no network or keys needed) | `cd backend && uv run pytest` |
+| Backend tests (no network or keys needed) | `cd backend && uv run pytest` |
 | Backend lint + types | `uv run ruff check . && uv run ruff format --check . && uv run mypy app` |
 | Frontend lint + types + build | `cd frontend && npm run lint && npm run typecheck && npm run build` |
 | Everything (Windows) | `scripts\check.ps1` |
@@ -459,19 +392,11 @@ The scoring formulas have golden tests; domain logic (places, titles, glossary, 
 
 ---
 
-## Limits and what's next
+## What's next
 
-**Honest limits today**
-- Job sources are Greenhouse, Lever and Ashby. Companies on other systems (Workday, Personio…) aren't covered yet.
-- The company score uses hiring activity and the careers site only. The news signal is designed but not built.
-- Name-only sign-in is for a demo, not for production.
-- The deployed endpoint keeps SQLite on its own disk, so a re-deploy starts with an empty database.
-
-**Next**
-- More boards: one parser in `services/ats.py` plus its domain in `ATS_DOMAINS`.
+- More job sources: one parser in `services/ats.py` plus its domain in `ATS_DOMAINS` (Workday, Personio…).
 - Company news from Tavily `topic=news`, each article with a quote and link.
 - An advisor step: tailored CV bullets and a cover-letter draft per job, using the same quotes.
-- A side-by-side comparison against Tavily `/research` as a baseline.
 
 ---
 
@@ -480,16 +405,6 @@ The scoring formulas have golden tests; domain logic (places, titles, glossary, 
 - [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md): the plan, decisions D1–D18, scoring formulas.
 - [docs/PHASE2_PLAN.md](docs/PHASE2_PLAN.md): Phase 2 fixes and decisions D19–D30 (they win where they differ).
 - [deploy/nebius/README.md](deploy/nebius/README.md): deploy the app on one Nebius Serverless AI endpoint.
-- [docs/reference-ai-agent-orchestrator.md](docs/reference-ai-agent-orchestrator.md): what we took from `mathcrypto/ai-agent-orchestrator`, and why.
-- [CLAUDE.md](CLAUDE.md): rules for AI coding agents in this repo.
-
-## Team
-
-| Name | Role |
-|---|---|
-| _TBD_ | Backend |
-| _TBD_ | Frontend |
-| _TBD_ | Pitch |
 
 ## License
 
