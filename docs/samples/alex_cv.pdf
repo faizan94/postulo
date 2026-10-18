@@ -1,0 +1,49 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 601 >>
+stream
+BT /F1 10 Tf 50 800 Td 12 TL
+(Alex Example) Tj T*
+(Berlin, Germany) Tj T*
+(alex@example.com | +49 151 2345 6789) Tj T*
+(Geburtsdatum: 01.01.1990) Tj T*
+() Tj T*
+(Experience) Tj T*
+(Data Engineer, Nordwind GmbH, 03/2020 - present) Tj T*
+(Built pipelines with Python, SQL, Apache Airflow and dbt on AWS. Docker in production.) Tj T*
+(Junior Data Analyst, Seeblick AG, 2018 - 2020) Tj T*
+(Dashboards in Tableau, SQL, communication with stakeholders.) Tj T*
+() Tj T*
+(Education) Tj T*
+(M.Sc. Computer Science, TU Berlin, 2016 - 2018) Tj T*
+() Tj T*
+(Languages) Tj T*
+(English [fluent], German B2) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000893 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+963
+%%EOF
