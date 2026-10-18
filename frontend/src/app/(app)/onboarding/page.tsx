@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { CvReview } from "@/features/cv/CvReview";
 import { CvUpload } from "@/features/cv/CvUpload";
+import { ProfileCard } from "@/features/cv/ProfileCard";
 import { PlacesInput } from "@/features/search/PlacesInput";
 import { TitlesInput } from "@/features/search/TitlesInput";
 import { api } from "@/lib/api";
@@ -49,8 +50,8 @@ export default function OnboardingPage() {
     setTitles(t);
     setPlaces(p);
     c.warnings.forEach((w) => toast.info(w));
-    // D11: run the first search automatically when the CV gives us both.
-    if (t.length && p.length) void start(c.cv_version.id, t, p);
+    // D11/D22: run the first search automatically; no place in the CV means Anywhere.
+    if (t.length) void start(c.cv_version.id, t, p);
     else setStep("details");
   }
 
@@ -106,13 +107,14 @@ export default function OnboardingPage() {
             className="space-y-6"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!titles.length || !places.length) {
-                toast.error("Add at least one job title and one place.");
+              if (!titles.length) {
+                toast.error("Add at least one job title.");
                 return;
               }
               void start(confirmed.cv_version.id, titles, places);
             }}
           >
+            <ProfileCard profile={confirmed.profile} collapsible />
             <div className="space-y-2">
               <h2 className="font-medium">What jobs should we look for?</h2>
               <TitlesInput
@@ -123,7 +125,6 @@ export default function OnboardingPage() {
             </div>
             <div className="space-y-2">
               <h2 className="font-medium">Where do you want to work?</h2>
-              <p className="text-sm text-zinc-500">Pick a city, a country or Remote.</p>
               <PlacesInput value={places} onChange={setPlaces} />
             </div>
             <Button type="submit" size="lg" className="h-10">

@@ -20,8 +20,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
 COPY scripts ./scripts
 
-# SQLite lives in /app/data (a volume in docker-compose.yml).
-RUN mkdir -p /app/data && useradd --create-home --uid 10001 appuser && chown -R appuser /app
+# SQLite lives in /app/data (a volume in docker-compose.yml). Only that folder is writable by
+# appuser; chown -R on /app would duplicate the whole .venv into another layer.
+RUN mkdir -p /app/data && useradd --create-home --uid 10001 appuser && chown appuser:appuser /app/data
 USER appuser
 
 ENV PATH="/app/.venv/bin:$PATH"

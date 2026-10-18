@@ -40,6 +40,11 @@ export function JobCardItem({ card, rank, searchId }: { card: JobCard; rank: num
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <CompanyScoreBadge score={card.company_score} />
+            {card.related_role && (
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200">
+                Related role
+              </span>
+            )}
             <span className="text-xs text-zinc-500">
               Must-haves {card.match.must_met} · Nice-to-haves {card.match.nice_met}
             </span>

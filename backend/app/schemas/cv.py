@@ -40,6 +40,13 @@ class SuggestedSearch(BaseModel):
     place: Place | None = None
 
 
+class CvDetail(BaseModel):
+    """GET /api/cv/{id}: one version with its structured profile (D23)."""
+
+    cv_version: CvVersion
+    profile: Profile | None = None
+
+
 class CvConfirmed(BaseModel):
     cv_version: CvVersion
     profile: Profile

@@ -9,7 +9,8 @@ from app.api.deps import SessionDep, UserDep
 from app.api.presenters import cv_out
 from app.config import Settings, get_settings
 from app.db.repos import cv_versions
-from app.schemas.cv import CvConfirm, CvConfirmed, CvDraft, CvVersion, SuggestedSearch
+from app.schemas.cv import CvConfirm, CvConfirmed, CvDetail, CvDraft, CvVersion, SuggestedSearch
+from app.schemas.profile import Profile
 from app.services.intake import extract
 from app.services.intake.router import MAX_BYTES
 
@@ -21,12 +22,12 @@ async def upload_cv(
     user: UserDep,
     s: SessionDep,
     settings: Annotated[Settings, Depends(get_settings)],
-    file: Annotated[UploadFile | None, File(description="PDF or .docx")] = None,
+    file: Annotated[UploadFile | None, File(description="PDF, .docx or image")] = None,
     text: Annotated[str | None, Form(max_length=40_000)] = None,
 ) -> CvDraft:
     """Extract and clean the text. Nothing is used until the user confirms it."""
     data = await file.read(MAX_BYTES + 1) if file is not None else None
-    result = extract(settings, filename=file.filename if file else None, data=data, text=text)
+    result = await extract(settings, filename=file.filename if file else None, data=data, text=text)
     cv = await cv_versions.create_draft(
         s, user.id, result.label, result.source_type, result.text, result.ocr_used
     )
@@ -60,6 +61,14 @@ async def confirm_cv(
 @router.get("", response_model=list[CvVersion])
 async def list_cvs(user: UserDep, s: SessionDep) -> list[CvVersion]:
     return [cv_out(cv) for cv in await cv_versions.list_confirmed(s, user.id)]
+
+
+@router.get("/{cv_id}", response_model=CvDetail)
+async def get_cv(cv_id: int, user: UserDep, s: SessionDep) -> CvDetail:
+    """One CV version with the structured profile we read from it (D23)."""
+    cv = await cv_versions.get_owned(s, user.id, cv_id)
+    profile = Profile.model_validate(cv.profile) if cv.profile else None
+    return CvDetail(cv_version=cv_out(cv), profile=profile)
 
 
 @router.delete("/{cv_id}", status_code=204)

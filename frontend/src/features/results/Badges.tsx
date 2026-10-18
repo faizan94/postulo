@@ -1,23 +1,40 @@
 import { Building2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { COMPANY_BAND_MEANING, COMPANY_BANDS_LINE, COMPANY_SCORE_WHAT } from "@/lib/company";
 import { BAND, STATUS } from "@/lib/status";
 import type { CompanyScore, SkillMatch, SkillStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function CompanyScoreBadge({ score }: { score: CompanyScore }) {
   const band = BAND[score.band];
+  const scored = score.value !== null;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1",
-        band.chip,
-        score.band === "pending" && "animate-pulse",
-      )}
-    >
-      <Building2 className="size-3" aria-hidden />
-      Company: {band.label}
-      {score.value !== null && <span className="tabular-nums opacity-80">{score.value}</span>}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            "inline-flex cursor-default items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1",
+            band.chip,
+            score.band === "pending" && "animate-pulse",
+          )}
+        >
+          <Building2 className="size-3" aria-hidden />
+          Company: {band.label}
+          {scored && <span className="tabular-nums opacity-80">{score.value}</span>}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <div>
+          <p className="font-medium">
+            Company score{scored && `: ${score.value}/100 · ${COMPANY_BAND_MEANING[score.band]}`}
+          </p>
+          <p className="mt-1 opacity-80">{COMPANY_SCORE_WHAT}</p>
+          <p className="mt-1 opacity-80">
+            {scored ? COMPANY_BANDS_LINE : COMPANY_BAND_MEANING[score.band]}
+          </p>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -41,11 +58,13 @@ export function SkillChip({ match }: { match: SkillMatch }) {
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">
-        <p className="font-medium">
-          {s.label} · {r.importance === "must" ? "required" : "nice to have"}
-        </p>
-        <p className="mt-1 opacity-80">“{r.evidence.quote}”</p>
-        {match.cv_evidence && <p className="mt-1 opacity-80">Your CV: “{match.cv_evidence.quote}”</p>}
+        <div>
+          <p className="font-medium">
+            {s.label} · {r.importance === "must" ? "required" : "nice to have"}
+          </p>
+          <p className="mt-1 opacity-80">“{r.evidence.quote}”</p>
+          {match.cv_evidence && <p className="mt-1 opacity-80">Your CV: “{match.cv_evidence.quote}”</p>}
+        </div>
       </TooltipContent>
     </Tooltip>
   );

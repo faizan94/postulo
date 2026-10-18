@@ -1,0 +1,3 @@
+# Local deploy state (IPs, endpoint ids). Also covered by the root .gitignore.
+.state/
+.env.nebius

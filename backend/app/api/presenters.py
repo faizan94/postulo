@@ -88,6 +88,7 @@ def job_card(r: SearchResult, p: Posting, c: Company | None) -> JobCard:
         match=_match(r.breakdown),
         company_score=company_score(c),
         top_skills=top_skills(skills),
+        related_role=r.breakdown.get("title_match") == "related",
     )
 
 
@@ -105,6 +106,7 @@ def posting_detail(r: SearchResult, p: Posting, c: Company | None) -> PostingDet
         match=_match(r.breakdown),
         skills=_skills(r.breakdown),
         company_score=company_score(c),
+        related_role=r.breakdown.get("title_match") == "related",
     )
 
 
@@ -115,6 +117,8 @@ def search_summary(s: Search, result_count: int) -> SearchSummary:
         cv_version_id=s.cv_version_id,
         titles=list(s.titles),
         places=[Place.model_validate(p) for p in s.places],
+        keywords=list(s.keywords or []),
+        related_titles=list(s.related_titles or []),
         result_count=result_count,
         created_at=s.created_at,
         finished_at=s.finished_at,

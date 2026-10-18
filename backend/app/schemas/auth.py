@@ -29,4 +29,4 @@ class MeResponse(BaseModel):
 
 class SettingsUpdate(BaseModel):
     titles: list[ShortText] = Field(min_length=1, max_length=3)
-    places: list[Place] = Field(min_length=1, max_length=5)
+    places: list[Place] = Field(default_factory=list, max_length=5)

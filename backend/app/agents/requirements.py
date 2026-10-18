@@ -4,6 +4,7 @@ Cached on the posting by text hash: the same posting text is never extracted twi
 """
 
 import hashlib
+import re
 from typing import Any
 
 from pydantic import ValidationError
@@ -17,7 +18,7 @@ from app.domain.rules import extract_requirements
 from app.schemas.common import Evidence
 from app.schemas.posting import Requirement
 
-EXTRACTION_VERSION = "v3"  # bump when extraction logic changes: old cache entries re-run
+EXTRACTION_VERSION = "v5"  # bump when extraction logic changes: old cache entries re-run
 RULES_MODEL = f"rules@{EXTRACTION_VERSION}"
 BATCH = 5
 MAX_TEXT_PER_POSTING = 8_000
@@ -28,26 +29,100 @@ def text_hash(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def canonical_names(name: str, req_type: str) -> list[tuple[str, str]]:
-    """Map an LLM requirement name to canonical glossary names (D2).
+_PAREN = re.compile(r"\([^)]*\)")
+_AND = re.compile(r"\s*(?:,|;|&|\band\b|\bund\b|\s\+\s)\s*", re.I)
+_ALT = re.compile(r"\s*(?:/|\||\bor\b|\boder\b)\s*", re.I)
 
-    "Airflow/Flyte/Ray" -> [("Apache Airflow", "tech")]; "computer science degree" -> Degree.
-    Names the glossary doesn't know are kept (short), so nothing the posting asks is lost.
-    """
+
+def _known(part: str) -> tuple[str, str] | None:
+    """(canonical name, type) if the glossary knows this part, in any spelling."""
     g = glossary()
+    term = g.term(part)
+    if term is None:
+        # a glossary term that covers (almost) the whole part, e.g. "Apache Spark 3"
+        hits = [h for h in g.find(part) if (h.end - h.start) >= 0.7 * len(part.strip())]
+        term = hits[0].term if hits else None
+    if term is None:
+        return None
+    return term.name, "soft" if term.kind == "soft" else term.type
+
+
+MAX_PART_WORDS = 3  # a list item longer than this is a phrase, not a skill: don't split
+MAX_NAME_WORDS = 6  # a "name" longer than this is a description, not a skill name
+MAX_NAME_CHARS = 60
+
+
+def _is_name(part: str) -> bool:
+    """Short enough to be a skill name, or a known skill."""
+    return len(part.split()) <= MAX_PART_WORDS or _known(part) is not None
+
+
+def _split(text: str, pattern: re.Pattern[str]) -> list[str]:
+    """Split only when the pieces look like a list of skill names; otherwise keep it whole.
+
+    A list: every piece is a known skill or at most 3 words, and at least one piece is known
+    (or every piece is 1-2 words, like 'Flyte, Ray'). 'Python, SQL and dbt' -> 3 parts;
+    'Demonstrated experience designing, implementing, or securing ...' stays one piece.
+    """
+    parts = [p.strip() for p in pattern.split(text) if p.strip()]
+    if len(parts) < 2 or not all(_is_name(p) for p in parts):
+        return [text]
+    if any(_known(p) for p in parts) or all(len(p.split()) <= 2 for p in parts):
+        return parts
+    return [text]
+
+
+def _is_description(chunk: str) -> bool:
+    """Not a skill name: long, or a multi-word phrase with list punctuation."""
+    words = len(chunk.split())
+    return (
+        words > MAX_NAME_WORDS
+        or len(chunk) > MAX_NAME_CHARS
+        or (words > MAX_PART_WORDS and any(c in chunk for c in ",;:"))
+    )
+
+
+def _skills_inside(phrase: str) -> list[tuple[str, str]]:
+    """Known skills mentioned inside a long description ('...on AWS and Kubernetes')."""
+    out: list[tuple[str, str]] = []
+    for h in glossary().find(phrase):
+        k = (h.term.name, "soft" if h.term.kind == "soft" else h.term.type)
+        if k not in out:
+            out.append(k)
+    return out
+
+
+def canonical_names(name: str, req_type: str) -> list[tuple[str, str]]:
+    """Map an LLM requirement name to canonical names (D2/D25, tokenized form).
+
+    - any spelling of a known skill -> its canonical name ('REACT' -> React, 'Node JS' -> Node.js)
+    - a short list "A, B and C" -> all of them; "A/B/C" or "A or B" -> the alternatives we know
+      ('Airflow/Flyte/Ray' -> Apache Airflow)
+    - a long description is never cut into fragments: the known skills inside it are used,
+      and if there are none it is dropped (it's not a skill name; the quote stays in the post)
+    - short unknown names are kept as written ('Flyte', 'Vector databases'), and longer known
+      names are not shortened ('React Native' stays React Native).
+    """
     if req_type == "degree":
         return [("Degree", "degree")]
     if req_type == "years":
         return [("Experience", "years")]
-    hits = g.find(name)
-    if hits:
-        out: list[tuple[str, str]] = []
-        for h in hits:
-            t = "soft" if h.term.kind == "soft" else h.term.type
-            if (h.term.name, t) not in out:
-                out.append((h.term.name, t))
-        return out
-    return [(g.canonical(name)[:60], req_type)]
+    clean = " ".join(_PAREN.sub(" ", name).split()) or " ".join(name.split())
+    if glossary().term(clean) is not None:
+        whole = _known(clean)
+        return [whole] if whole else []
+    out: list[tuple[str, str]] = []
+    for chunk in _split(clean, _AND):
+        alts = _split(chunk, _ALT)
+        known = [k for a in alts if (k := _known(a))]
+        if known:
+            picked = known
+        elif _is_description(chunk):
+            picked = _skills_inside(chunk)
+        else:
+            picked = [(glossary().canonical(chunk), req_type)]
+        out += [k for k in picked if k not in out]
+    return out
 
 
 def parse_llm_requirements(items: Any, text: str) -> list[Requirement]:
@@ -75,15 +150,17 @@ def parse_llm_requirements(items: Any, text: str) -> list[Requirement]:
         except (ValidationError, KeyError, TypeError, ValueError):
             continue
         for req in reqs:
-            old = out.get(req.name)
+            k = glossary().key_of(req.name)
+            old = out.get(k)
             if old is None or (old.importance == "nice" and req.importance == "must"):
-                out[req.name] = req
+                out[k] = req
     return list(out.values())
 
 
 def merge(primary: list[Requirement], backup: list[Requirement]) -> list[Requirement]:
-    names = {r.name for r in primary}
-    return primary + [r for r in backup if r.name not in names]
+    g = glossary()
+    keys = {g.key_of(r.name) for r in primary}
+    return primary + [r for r in backup if g.key_of(r.name) not in keys]
 
 
 def _cached(p: Posting, gate: LLMGate) -> list[Requirement] | None:

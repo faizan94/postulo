@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./data/postulo.db"
 
     # --- Pipeline limits and freshness ---
-    ocr_enabled: bool = False
+    ocr_enabled: bool = True  # Nemotron vision for scans/photos/broken PDFs (D19)
     max_tavily_credits_per_run: int = Field(default=20, ge=1)
     max_llm_calls_per_run: int = Field(default=15, ge=1)
     recent_days: int = Field(default=45, ge=1)

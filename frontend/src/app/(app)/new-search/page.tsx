@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { CvReview } from "@/features/cv/CvReview";
 import { CvUpload } from "@/features/cv/CvUpload";
+import { KeywordsInput } from "@/features/search/KeywordsInput";
+import { OpenSearchBox } from "@/features/search/OpenSearchBox";
 import { PlacesInput } from "@/features/search/PlacesInput";
 import { TitlesInput } from "@/features/search/TitlesInput";
 import { api } from "@/lib/api";
@@ -29,15 +31,16 @@ export default function NewSearchPage() {
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState<CvDraft | null>(null);
   const [suggested, setSuggested] = useState<string[]>([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!cvId) return toast.error("Choose a CV first.");
-    if (!titles.length || !places.length) return toast.error("Add a job title and a place.");
+    if (!titles.length) return toast.error("Add at least one job title.");
     setBusy(true);
     try {
-      const { search_id } = await api.startSearch(cvId, titles, places);
+      const { search_id } = await api.startSearch(cvId, titles, places, keywords);
       await refresh();
       void qc.invalidateQueries({ queryKey: ["history"] });
       router.push(`/search/${search_id}`);
@@ -53,8 +56,18 @@ export default function NewSearchPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">New search</h1>
-        <p className="text-zinc-500">Reuse a saved CV or upload a new one.</p>
+        <p className="text-zinc-500">Describe the job in your own words, or fill in the fields.</p>
       </div>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <OpenSearchBox
+          onParsed={(intent) => {
+            if (intent.titles.length) setTitles(intent.titles.slice(0, 3));
+            setPlaces(intent.places);
+            setKeywords(intent.keywords);
+          }}
+        />
+      </section>
 
       <section className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
@@ -122,6 +135,10 @@ export default function NewSearchPage() {
         <div className="space-y-2">
           <h2 className="font-medium">Places</h2>
           <PlacesInput value={places} onChange={setPlaces} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-medium">Keywords</h2>
+          <KeywordsInput value={keywords} onChange={setKeywords} />
         </div>
         <Button type="submit" size="lg" className="h-10" disabled={busy || uploading}>
           {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Search data-icon="inline-start" aria-hidden />}

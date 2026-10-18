@@ -10,7 +10,7 @@ Guidance for Claude Code (and other AI coding agents) working in this repo.
 
 ## What this is
 
-Postulo: an AI job-application agent. CV PDF + preferences go in; 5-10 verified, scored job postings come out, each skill tagged gold (match) / orange (gap worth covering) / red (important gap). MVP only, no auto-applying. See [README.md](README.md) for the full picture.
+Postulo: an AI job-application agent. CV PDF + preferences go in; 5-10 verified, scored job postings come out, each skill tagged have / related / missing_nice / missing_must (emerald / sky / amber / rose), with a match score and a company score. MVP only, no auto-applying. See [README.md](README.md) for the full picture.
 
 Stack: NVIDIA Nemotron on Nebius Token Factory (OpenAI-compatible, via the `openai` SDK), Tavily search, FastAPI backend (uv), Next.js 16 frontend (npm).
 
@@ -36,7 +36,7 @@ Before saying a change is done: backend changes -> pytest + ruff; frontend chang
 
 ## Layout
 
-Plan and decision log: [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md). If code and plan disagree, fix one of them.
+Plan and decision log: [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) and [docs/PHASE2_PLAN.md](docs/PHASE2_PLAN.md) (Phase 2 wins where they differ). If code and plan disagree, fix one of them.
 
 - `backend/app/agents/orchestrator.py`: the search state machine (plan -> discover -> quiet checks -> widen -> requirements -> match -> company score -> rank). Results are saved and streamed as they come.
 - `backend/app/agents/`: `planner.py`, `discover.py` (Tavily finds boards; board APIs give open jobs), `requirements.py`, `profile.py`, `llm_gate.py` (every LLM call goes through it; rules take over on failure). Prompts live in `agents/prompts/`, never inline.

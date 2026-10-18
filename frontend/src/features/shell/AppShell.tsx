@@ -1,6 +1,6 @@
 "use client";
 
-import { History, LogOut, Plus, Settings } from "lucide-react";
+import { History, LogOut, Plus, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/new-search", label: "New search", icon: Plus },
   { href: "/history", label: "History", icon: History },
+  { href: "/profile", label: "Profile", icon: UserRound },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

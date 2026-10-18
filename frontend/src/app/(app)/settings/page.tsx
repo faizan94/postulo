@@ -71,7 +71,7 @@ export default function SettingsPage() {
         </div>
         <Button
           onClick={() => save.mutate()}
-          disabled={save.isPending || !titles.length || !places.length}
+          disabled={save.isPending || !titles.length}
         >
           Save defaults
         </Button>

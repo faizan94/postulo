@@ -15,11 +15,25 @@ Stage = Literal["planning", "searching", "checking", "reading", "matching", "com
 class SearchCreate(BaseModel):
     cv_version_id: int
     titles: list[ShortText] = Field(min_length=1, max_length=3)
-    places: list[Place] = Field(min_length=1, max_length=5)
+    places: list[Place] = Field(default_factory=list, max_length=5)  # empty = Anywhere (D22)
+    keywords: list[ShortText] = Field(default_factory=list, max_length=5)
 
 
 class SearchCreated(BaseModel):
     search_id: int
+
+
+class SearchParseRequest(BaseModel):
+    text: str = Field(min_length=2, max_length=300)
+
+
+class SearchIntent(BaseModel):
+    """POST /api/searches/parse: free text -> editable search fields (D21)."""
+
+    titles: list[str] = Field(default_factory=list, max_length=3)
+    places: list[Place] = Field(default_factory=list, max_length=5)
+    keywords: list[str] = Field(default_factory=list, max_length=5)
+    by_ai: bool = False
 
 
 class SkillSummaryItem(BaseModel):
@@ -46,6 +60,8 @@ class SearchSummary(BaseModel):
     cv_version_id: int | None
     titles: list[str]
     places: list[Place]
+    keywords: list[str] = Field(default_factory=list)
+    related_titles: list[str] = Field(default_factory=list)
     result_count: int
     created_at: datetime
     finished_at: datetime | None = None

@@ -31,5 +31,18 @@ export const WORKPLACE: Record<WorkplaceType, string> = {
 };
 
 export function placesLabel(places: Place[]): string {
-  return places.map((p) => p.name).join(", ");
+  return places.length ? places.map((p) => p.name).join(", ") : "Anywhere";
+}
+
+/**
+ * Comparison key for names, same rule as the backend (domain/normalize.py `key`):
+ * "REACT" = "react", "Node JS" = "Node.js", "München" = "Munchen". Display text is unchanged.
+ */
+export function nameKey(text: string): string {
+  return text
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9+#]/g, "");
 }

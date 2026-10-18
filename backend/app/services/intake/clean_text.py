@@ -12,11 +12,16 @@ _PERSONAL_LINE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 _BLANKS = re.compile(r"\n{3,}")
+# Personal profile links identify the person (the account is name-only, D13).
+_PROFILE_URL = re.compile(
+    r"(?:https?://)?(?:[\w-]+\.)?(?:linkedin\.com/in|xing\.com/profile)/[\w%-]+/?", re.IGNORECASE
+)
 
 
 def clean(text: str) -> str:
     t = text.replace("\r\n", "\n").replace("\r", "\n")
     t = _PERSONAL_LINE.sub("", t)
+    t = _PROFILE_URL.sub("[profile link removed]", t)
     t = _EMAIL.sub("[email removed]", t)
     t = _PHONE.sub("[phone removed]", t)
     t = "\n".join(line.rstrip() for line in t.split("\n"))

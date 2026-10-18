@@ -1,6 +1,7 @@
 // One function per backend endpoint (PHASE1_PLAN.md §5.4).
 import type {
   CvConfirmed,
+  CvDetail,
   CvDraft,
   CvVersion,
   HealthResponse,
@@ -10,6 +11,7 @@ import type {
   Place,
   PostingDetail,
   SearchDetail,
+  SearchIntent,
   SearchSummary,
   User,
 } from "@/lib/types";
@@ -43,10 +45,15 @@ export const api = {
   confirmCv: (id: number, text: string) =>
     request<CvConfirmed>(`/api/cv/${id}`, json("PUT", { text })),
   cvVersions: () => request<CvVersion[]>("/api/cv"),
+  cvDetail: (id: number) => request<CvDetail>(`/api/cv/${id}`),
   deleteCv: (id: number) => request<void>(`/api/cv/${id}`, { method: "DELETE" }),
 
-  startSearch: (cv_version_id: number, titles: string[], places: Place[]) =>
-    request<{ search_id: number }>("/api/searches", json("POST", { cv_version_id, titles, places })),
+  startSearch: (cv_version_id: number, titles: string[], places: Place[], keywords: string[] = []) =>
+    request<{ search_id: number }>(
+      "/api/searches",
+      json("POST", { cv_version_id, titles, places, keywords }),
+    ),
+  parseSearch: (text: string) => request<SearchIntent>("/api/searches/parse", json("POST", { text })),
   history: () => request<SearchSummary[]>("/api/searches"),
   search: (id: number) => request<SearchDetail>(`/api/searches/${id}`),
   rerun: (id: number) => request<{ search_id: number }>(`/api/searches/${id}/rerun`, { method: "POST" }),

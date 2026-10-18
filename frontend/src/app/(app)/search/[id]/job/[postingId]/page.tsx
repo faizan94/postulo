@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Building2, CalendarDays, ExternalLink, MapPin } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, ChevronRight, ExternalLink, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FullPageSpinner } from "@/components/FullPageSpinner";
@@ -10,7 +10,14 @@ import { PostText } from "@/features/job/PostText";
 import { CompanyScoreBadge, SkillChip, StatusLegend } from "@/features/results/Badges";
 import { MatchScoreRing } from "@/features/results/MatchScoreRing";
 import { api } from "@/lib/api";
+import {
+  COMPANY_BAND_MEANING,
+  COMPANY_BANDS_LINE,
+  COMPANY_SCORE_HOW,
+  COMPANY_SCORE_WHAT,
+} from "@/lib/company";
 import { daysAgo, placeLabel, WORKPLACE } from "@/lib/format";
+import { BAND } from "@/lib/status";
 import type { SkillMatch, SkillStatus } from "@/lib/types";
 
 const GROUPS: { title: string; statuses: SkillStatus[] }[] = [
@@ -62,6 +69,11 @@ export default function JobPage() {
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">{data.title}</h1>
+          {data.related_role && (
+            <span className="inline-block rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200">
+              Related role: same family as the title you searched
+            </span>
+          )}
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-zinc-500">
             <span className="inline-flex items-center gap-1 font-medium text-zinc-700">
               <Building2 className="size-4" aria-hidden />
@@ -132,22 +144,51 @@ export default function JobPage() {
               <h2 className="font-semibold">Company</h2>
               <CompanyScoreBadge score={data.company_score} />
             </div>
-            <p className="text-xs text-zinc-500">Based only on public hiring signals.</p>
-            <ul className="space-y-1.5 text-sm">
-              {data.company_score.sources.map((s) => (
-                <li key={s.url}>
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-indigo-700 hover:underline"
-                  >
-                    {s.title}
-                    <ExternalLink className="size-3" aria-hidden />
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-1 text-sm">
+              {data.company_score.value !== null ? (
+                <p className="font-medium text-zinc-900">
+                  {BAND[data.company_score.band].label} ({data.company_score.value}/100):{" "}
+                  {COMPANY_BAND_MEANING[data.company_score.band].toLowerCase()}
+                </p>
+              ) : (
+                <p className="text-zinc-700">{COMPANY_BAND_MEANING[data.company_score.band]}</p>
+              )}
+              <p className="text-zinc-500">{COMPANY_SCORE_WHAT}</p>
+            </div>
+            {data.company_score.sources.length > 0 && (
+              <ul className="space-y-1.5 text-sm">
+                {data.company_score.sources.map((s) => (
+                  <li key={s.url}>
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-indigo-700 hover:underline"
+                    >
+                      {s.title}
+                      <ExternalLink className="size-3" aria-hidden />
+                    </a>
+                    {s.date && <p className="text-xs text-zinc-500">Newest job post {daysAgo(s.date)}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {data.company_score.value !== null && (
+              <details className="group text-sm">
+                <summary className="cursor-pointer list-none text-zinc-500 hover:text-zinc-700 [&::-webkit-details-marker]:hidden">
+                  <span className="inline-flex items-center gap-1">
+                    <ChevronRight className="size-3.5 transition group-open:rotate-90" aria-hidden />
+                    How this is calculated
+                  </span>
+                </summary>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-zinc-600">
+                  {COMPANY_SCORE_HOW.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                  <li>{COMPANY_BANDS_LINE}.</li>
+                </ul>
+              </details>
+            )}
           </div>
         </aside>
 

@@ -1,6 +1,6 @@
 # Postulo: Phase 1 Plan
 
-> Status: plan only, no code changed yet. Version 2 (18 Oct 2026), revised after an independent review (see §13).
+> Status: Phase 1 is built (see §14). Phase 2 (`PHASE2_PLAN.md`) extends it and, where they differ, Phase 2 wins. Version 2 (18 Oct 2026), revised after an independent review (see §13).
 > Sources: `../../idea.md`, `../../TRACKS.md`, `../../TECH.md`, the current code in `backend/` and `frontend/`, and the team decisions in §2.
 > Rules from `../CLAUDE.md` still apply: never commit from an agent, every endpoint works in mock mode and has a network-free test, `schemas` and `frontend/src/lib/types.ts` change together, and settings live only in `app/config.py`.
 
@@ -8,7 +8,7 @@
 
 ## 1. Goal and scope
 
-**One line:** a job seeker signs in with a name and uploads a CV. Postulo runs a first search automatically and shows the open, recent jobs that fit them best. Each job gets a **match score** (how well you fit) and a **company score** (how healthy the employer looks). A skill chart shows what to learn next.
+**One line:** a job seeker signs in with a name and uploads a CV. Postulo runs a first search automatically and shows the open, recent jobs that fit them best. Each job gets a **match score** (how well you fit) and a **company score** (how actively the employer is hiring). A skill chart shows what to learn next or add to the CV.
 
 **Tracks (assumed, confirm):** main track is Agentic Deep Research (Token Factory + Tavily); subtrack is Nemotron Agentic AI.
 
@@ -33,7 +33,7 @@
 
 ## 2. Decisions log (single source of truth)
 
-If a later doc or code disagrees with this table, this table wins until the team changes it.
+If code disagrees with this table, fix one of them. `PHASE2_PLAN.md` decisions D19 and later extend this table and win where they differ (marked "Superseded" below).
 
 | # | Decision | Replaces / changes |
 |---|---|---|
@@ -45,15 +45,15 @@ If a later doc or code disagrees with this table, this table wins until the team
 | D6 | Match score is 0–100% from a fixed formula in code (§7.1). The same CV version and posting always give the same score; LLM verdicts are cached so re-runs can't drift. | Replaces LLM-invented 0–5 stars |
 | D7 | Company score is 0–100 from **public signals only**: hiring activity and basics (Core), plus news from the last 12 months (Stretch). It shows "Not enough data" instead of guessing. No Glassdoor or kununu scores; we link out only. **(Needs team OK.)** | New |
 | D8 | Skill statuses are `have`, `related`, `missing_nice`, `missing_must`, colored emerald, sky, amber and rose, each with an icon. | Replaces gold/orange/red (idea.md §4) |
-| D9 | Location is structured (city, country or Remote; several allowed), picked from a fixed list served by `GET /api/places`. Code filters on the job's own location. Widening stays inside the same country and the UI says so. | Replaces fixed Berlin/Germany/World and silent widening to World |
-| D10 | Search settings are only places and 1–3 job titles. The free-text "wishes" box is removed (it leaked personal details into Tavily queries and prompts). | Removes `Preferences.prompt` |
+| D9 | **Superseded by D22 (places optional, typed places, regions).** Location is structured (city, country or Remote; several allowed), picked from a fixed list served by `GET /api/places`. Code filters on the job's own location. Widening stays inside the same country and the UI says so. | Replaces fixed Berlin/Germany/World and silent widening to World |
+| D10 | **Extended by D21 (open search) and D22 (places optional).** Search settings are only places and 1–3 job titles. The free-text "wishes" box is removed (it leaked personal details into Tavily queries and prompts). | Removes `Preferences.prompt` |
 | D11 | Onboarding runs the first search automatically with the titles and place suggested from the CV, and saves them as the user's defaults. If the CV has no place, it asks one question first. | New |
 | D12 | Storage is SQLite. We store users, sessions, CV versions (cleaned text + profile), searches, results and caches, not the original file or image. Contact details and personal lines are stripped on a best-effort basis. There is a "Delete my data" button. | Replaces "CV is not stored" (UI copy must change) |
 | D13 | Login is a name only; the server returns a random token that the browser keeps until logout. Names are trimmed and case-insensitive. **Anyone who knows a name can open that account**, and the UI says so. | New |
 | D14 | Job seekers see progress in plain words. Judges get a separate **"How it works" view** with the agent trace (plans, tool calls, decisions, drops). It is reachable from a small footer link, so the main UI stays clean and the tracks' "show the trace" requirement is met. | Replaces the trace in the main UI |
 | D15 | Posting text is shown as fetched, converted to plain text, never rewritten by the LLM and never rendered as raw HTML. | New |
 | D16 | **One sort key, defined only in `scoring/rank.py`:** thin postings last, then match score (high first), then postings with a known date before unknown, then newest first. The company score is shown beside it; a toggle can sort by company score instead. | New |
-| D17 | The planner is bounded. The LLM writes queries as JSON; code runs them and enforces the limits (max 3 rounds, stays in the user's country, budget caps). Widening is rule-based in Core and an LLM choice in Stretch. | Replaces "widen location" as the only adaptation |
+| D17 | **Partly superseded by D20: related roles are part of every search; widening is places only.** The planner is bounded. The LLM writes queries as JSON; code runs them and enforces the limits (max 3 rounds, stays in the user's country, budget caps). Widening is rule-based in Core and an LLM choice in Stretch. | Replaces "widen location" as the only adaptation |
 | D18 | Mock mode means **fake external services** (LLM, Tavily, board APIs, HTTP) over a **real SQLite database**, so auth, CV versions and history work the same in mock and real mode. | Clarifies the CLAUDE.md mock rule for DB-backed endpoints |
 
 ---
@@ -78,7 +78,7 @@ Sign in (name)
 |---|---|---|
 | Login | `/login` | A name field and a note: "No password: anyone with your name can open this account." |
 | Onboarding | `/onboarding` | 1) Upload (drag and drop) or paste. 2) Review the extracted text (editable). 3) Place question only if the CV has none. Then it starts the search and goes to the results page. |
-| Search results | `/search/[id]` | While running: progress in plain words; job cards appear as they are matched (company score shows "…" until ready). Done: skill chart at the top, "Learn next" (Gap ROI), job cards, sort toggle. |
+| Search results | `/search/[id]` | While running: progress in plain words; job cards appear as they are matched (company score shows "…" until ready). Done: skill chart at the top, "Learn next or add to your CV" (Gap ROI, D30), job cards, sort toggle. |
 | Job detail | `/search/[id]/job/[postingId]` | Match score with breakdown, company score with sources, skills you have and are missing (color + icon), the full post text with skills highlighted, and the apply button. |
 | New search | `/new-search` | CV version picker (by date) or upload new, titles (chips), places (picker), Run. Prefilled from the defaults. |
 | History | `/history` | Past searches (date, titles, places) with Open and Re-run. |
@@ -216,13 +216,15 @@ There are no migrations in Phase 1 (`create_all` on startup). "Delete my data" r
 | `POST /api/auth/login` `{name}` | Find or create the user, return `{token, user}` | No auth. 2–40 chars: letters, digits, space, `-`, `_` |
 | `POST /api/auth/logout` | Delete the session | |
 | `GET /api/me` | User, defaults, `has_cv`, `latest_search_id` | |
-| `PUT /api/me/settings` `{titles, places}` | Save defaults | 1–3 titles, 1–5 places |
+| `PUT /api/me/settings` `{titles, places}` | Save defaults | 1–3 titles, 0–5 places (D22) |
 | `DELETE /api/me` | Delete my data | |
 | `GET /api/places?q=` | Search the fixed places list | No auth; from `domain/data/places.json` |
 | `POST /api/cv` (multipart `file` **or** form `text`) | Extract text, return the draft `{cv_version_id, text, ocr_used, warnings}` | 10 MB, 10 pages max. `.doc` rejected; images rejected unless `OCR_ENABLED` |
 | `PUT /api/cv/{id}` `{text}` | Confirm the text, build the profile, return `{cv_version, profile, suggested: {titles, place\|null}}` | |
 | `GET /api/cv` / `DELETE /api/cv/{id}` | List or delete versions | |
-| `POST /api/searches` `{cv_version_id, titles, places}` | Start a search, return `{search_id}` | Also saves titles and places as defaults (D11) |
+| `POST /api/searches` `{cv_version_id, titles, places, keywords}` | Start a search, return `{search_id}` | 1–3 titles, 0–5 places (none = Anywhere), 0–5 keywords. Also saves titles and places as defaults (D11) |
+| `POST /api/searches/parse` `{text}` | Open search: free text -> `{titles, places, keywords, by_ai}` (D21) | |
+| `GET /api/cv/{id}` | One CV version with its structured profile (D23) | |
 | `GET /api/searches` | History | |
 | `GET /api/searches/{id}` | Status, stage, partial or final results, `skill_summary`, `learn_next`, `note` | Safe to reload at any time (results are saved incrementally) |
 | `GET /api/searches/{id}/events` | Live stream (`text/event-stream`) | See below |
@@ -244,7 +246,7 @@ On startup, any search left `running` (for example after a `--reload`) is marked
 ### 5.5 Core shapes (in `schemas/`, mirrored in `types.ts`)
 
 ```text
-Place        {kind: "city"|"country"|"remote", name, country_code|null}
+Place        {kind: "city"|"country"|"region"|"remote", name, country_code|null}
 Evidence     {quote: str}                                  # verbatim, checked by code
 SkillItem    {name (canonical), type: tech|soft|domain, evidence, inferred: bool}
 Role         {title, company, start "YYYY-MM"|null, end "YYYY-MM"|"present"|null, evidence}
@@ -259,7 +261,8 @@ MatchScore   {value: 0-100|null, must_met "x/y", nice_met "x/y", gates_applied[s
 CompanyScore {value: 0-100|null, band: strong|okay|weak|not_enough_data|pending,
               sources[{title, url, date|null}]}
 JobCard      {posting_id, title, company, place, workplace_type, posted_at|null,
-              match: MatchScore, company: CompanyScore, top_skills[SkillMatch] (max 6)}
+              match: MatchScore, company_score: CompanyScore, top_skills[SkillMatch] (max 6),
+              related_role: bool}
 SkillSummary [{skill, user_status: have|related|missing, demand: n_jobs, of: total_jobs, must_count}]
 LearnNext    [{skill, jobs_improved, avg_gain_points, unlocks: n_jobs}]   # top 3
 ```
@@ -297,7 +300,7 @@ The OCR prompt (Stretch) returns the CV text only, never describes photos or peo
 ### 5.8 Settings (`app/config.py` + `.env.example` + README table)
 
 - **Existing:** `NEBIUS_API_KEY`, `NEBIUS_BASE_URL`, `NEMOTRON_MODEL`, `NEMOTRON_FAST_MODEL`, `LLM_TIMEOUT_SECONDS`, `LLM_MAX_TOKENS`, `TAVILY_API_KEY`, `MOCK_MODE`, `MAX_POSTINGS`, `CORS_ORIGINS`, `LOG_LEVEL`.
-- **New:** `NEMOTRON_VISION_MODEL`, `OCR_ENABLED` (false), `DATABASE_URL` (`sqlite+aiosqlite:///./data/postulo.db`), `MAX_TAVILY_CREDITS_PER_RUN` (20), `MAX_LLM_CALLS_PER_RUN` (15), `RECENT_DAYS` (45), `POSTING_RECHECK_HOURS` (24), `COMPANY_CACHE_DAYS` (30).
+- **New:** `NEMOTRON_VISION_MODEL`, `OCR_ENABLED` (true since Phase 2, D19), `DATABASE_URL` (`sqlite+aiosqlite:///./data/postulo.db`), `MAX_TAVILY_CREDITS_PER_RUN` (20), `MAX_LLM_CALLS_PER_RUN` (15), `RECENT_DAYS` (45), `POSTING_RECHECK_HOURS` (24), `COMPANY_CACHE_DAYS` (30).
 - **Frontend:** `NEXT_PUBLIC_API_URL` (exists).
 
 **Fix in M0:** `.env.example` has `NEMOTRON_MODEL=nvidia/Nemotron-3.5-Super-VL`, a guessed ID, while `config.py` defaults to `nvidia/nemotron-3-super-120b-a12b`. Set all three model IDs from the live list (`uv run python scripts/list_models.py`) and make both files match.
@@ -348,17 +351,17 @@ The weights and caps are starting values. Tune them in M3 on real postings and r
 | Signal group | Points | Source | When |
 |---|---|---|---|
 | Hiring activity | 0–50 | Open roles on their board and how recent the newest one is | Core (board-API companies only) |
-| Basics | 0–20 | Own website found; size stated on the site or in JSON-LD | Core |
+| Basics | 0–20 | Careers site on the company's own domain (company size: not built) | Core |
 | Stability news, last 12 months | 0–30 | Tavily news, each article classified positive, negative or neutral with a quote and link | Stretch |
 
 - **Not enough data:** if the hiring signal is missing (the company isn't on a supported board) and there is no news, the score is `null` with band `not_enough_data`. Otherwise the score is scaled to 0–100 over the groups that have data.
 - **Bands:** 70+ strong, 40–69 okay, below 40 weak.
-- **Display:** while it is still computing, the band is `pending`. Sources are listed on the job detail page.
+- **Display:** while it is still computing, the band is `pending`. Sources are listed on the job detail page. The badge tooltip and the job page explain it in plain words (D29).
 
 ### 7.3 Skill summary and Gap ROI
 
 - **Skill summary:** for each canonical skill in the shown jobs, how many jobs ask for it, how many as a must-have, and the user's own status (`have`, `related` or `missing`). Sorted by demand and labelled "in these N jobs".
-- **Gap ROI:** for each missing skill of type tech, domain or language (**not** years or degree), re-run the match score as if it were `have`. Report the jobs improved, the average gain in points, and how many jobs lose a cap. Show the top 3 as "Learn next"; mark languages "takes longer". No LLM call.
+- **Gap ROI:** for each missing skill of type tech, domain or language (**not** years or degree), re-run the match score as if it were `have`. Report the jobs improved, the average gain in points, and how many jobs lose a cap. Show the top 3 as "Learn next or add to your CV" (D30); mark languages "takes longer". No LLM call.
 
 ---
 
@@ -546,7 +549,7 @@ Version 1 was checked by an independent reviewer against the code, the project n
 
 ## 14. Implementation status (built 18 Oct 2026)
 
-Core is built and tested (backend: ruff, mypy, 47 tests; frontend: lint, typecheck, production build; browser click-through in Chrome on real Tavily and board data). Where the build differs from §5–§8, this section wins.
+Core is built and tested (at the end of Phase 1 — backend: ruff, mypy, 47 tests; frontend: lint, typecheck, production build; browser click-through in Chrome on real Tavily and board data). Where the build differs from §5–§8, this section wins.
 
 **Verified live**
 - Token Factory lists `nvidia/Nemotron-3.5-Super-VL`, `nvidia/Nemotron-3_5-Lightning`, `nvidia/nemotron-3-super-120b-a12b`. The `.env.example` ID in §5.8 was correct after all. The account returned 402 (no budget) at first and worked later; every LLM step falls back to grounded rules, so a 402 never breaks a search.
@@ -562,12 +565,12 @@ Core is built and tested (backend: ruff, mypy, 47 tests; frontend: lint, typeche
 | `match_cache` table + LLM "related" pass | Related = glossary groups, deterministic | Same score for same input (D6) without a cache or an LLM call |
 | Greenhouse `?content=true` list | Light list, then text per candidate job; board downloads capped at 6 MB / 20 s, parsed off the event loop | `doordashusa` was 8.5 MB and the `jobgether` aggregator 42 MB; they stalled a search |
 | Folders `services/ats/`, `services/fakes/`, `agents/checks.py`, `agents/matcher.py` | `services/ats.py`, `services/fakes.py`, checks inside `agents/discover.py`, `domain/matching.py`, plus `agents/llm_gate.py`, `api/presenters.py`, `scoring/summary.py` | Fewer files for the same responsibilities |
-| Requirements cached by text hash | Cached by text hash **and** `EXTRACTION_VERSION` (now `v3`) | Fixes to extraction re-run old cache entries |
+| Requirements cached by text hash | Cached by text hash **and** `EXTRACTION_VERSION` (current value in `agents/requirements.py`) | Fixes to extraction re-run old cache entries |
 | — | LLM requirement names are canonicalised through the glossary ("Airflow/Flyte/Ray" -> Apache Airflow; any degree -> Degree) | Found in the browser test: compound names caused false must-have gaps |
 | — | Rule extraction ignores domain/soft words in the company intro before the first header | Found in the browser test: "...ranging from Marketing, Sales" became a gap |
 | — | Compound titles are split ("Lead Data & AI Engineer" -> "Lead Data Engineer", "AI Engineer") | Found in the browser test: 0 results |
 | — | Boards whose Tavily hits mention the user's place are fetched first (max 8 per round); widening rounds add at most 2 queries | Saves credits and board fetches |
 
-**Not built (Stretch, unchanged):** OCR for images and scans, company news signal, LLM reflect step (Core uses rule-based widening), saved jobs and "closed since you saved it". `POSTING_RECHECK_HOURS` and `COMPANY_CACHE_DAYS` exist as settings but are not enforced yet (board lists and Tavily results use a 6 h in-memory cache; postings and companies are upserted in the DB).
+**Not built (Stretch):** company news signal (OCR for images and scans was built in Phase 2, D19), LLM reflect step (Core uses rule-based widening), saved jobs and "closed since you saved it". `POSTING_RECHECK_HOURS` and `COMPANY_CACHE_DAYS` exist as settings but are not enforced yet (board lists and Tavily results use a 6 h in-memory cache; postings and companies are upserted in the DB).
 
 **Measured on real data (Data Engineer, Berlin):** 6–12 Tavily credits for a first run, about 30–40 s end to end, 3 Nemotron calls (plan + requirement batches); quiet drops included closed jobs, a 111-day-old posting and a Warsaw job. Company scores are often "Strong" for big hiring companies, because the Core signal is hiring activity only.

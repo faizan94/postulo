@@ -23,14 +23,15 @@ def _missing(req: Requirement) -> SkillStatus:
 
 def match(profile: Profile, requirements: list[Requirement]) -> list[SkillMatch]:
     g = glossary()
-    skills = {s.name: s for s in profile.skills}
-    languages = {lang.name: lang for lang in profile.languages}
+    # Tokenized form: 'REACT', 'react' and 'React.js' are the same skill (domain/normalize.py).
+    skills = {g.key_of(s.name): s for s in profile.skills}
+    languages = {g.key_of(lang.name): lang for lang in profile.languages}
     out: list[SkillMatch] = []
     for req in requirements:
         status: SkillStatus
         evidence = None
         if req.type == "language":
-            lang = languages.get(req.name)
+            lang = languages.get(g.key_of(req.name))
             if lang and _level_ok(lang.level, req.level):
                 status, evidence = "have", lang.evidence
             else:
@@ -42,10 +43,13 @@ def match(profile: Profile, requirements: list[Requirement]) -> list[SkillMatch]
         elif req.type == "degree":
             status = "have" if profile.education else "missing_nice"
             evidence = profile.education[0].evidence if profile.education else None
-        elif req.name in skills:
-            status, evidence = "have", skills[req.name].evidence
+        elif g.key_of(req.name) in skills:
+            status, evidence = "have", skills[g.key_of(req.name)].evidence
         else:
-            related = next((skills[n] for n in g.related_to(req.name) if n in skills), None)
+            related = next(
+                (skills[g.key_of(n)] for n in g.related_to(req.name) if g.key_of(n) in skills),
+                None,
+            )
             if related is not None:
                 status, evidence = "related", related.evidence
             else:

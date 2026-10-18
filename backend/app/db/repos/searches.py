@@ -15,12 +15,15 @@ async def create(
     cv_version_id: int,
     titles: list[str],
     places: list[dict[str, Any]],
+    keywords: list[str] | None = None,
 ) -> Search:
     search = Search(
         user_id=user_id,
         cv_version_id=cv_version_id,
         titles=titles,
         places=places,
+        keywords=list(keywords or []),
+        related_titles=[],
         status="queued",
         trace=[],
         dropped=[],

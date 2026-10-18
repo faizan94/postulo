@@ -12,7 +12,8 @@ from typing import Protocol
 
 from app.agents.planner import Query
 from app.domain.places import JobLocation, places
-from app.domain.titles import title_matches
+from app.domain.remote import remote_ok_for
+from app.domain.titles import match_kind
 from app.schemas.common import Place
 from app.services.ats import ATS_DOMAINS, BoardJob, BoardRef, detect
 from app.services.tavily_client import SearchResult
@@ -62,6 +63,7 @@ class Candidate:
     job: BoardJob
     board_size: int
     newest_on_board: date | None
+    title_match: str = "exact"  # exact | related (D20)
 
 
 def _mentions_place(result: dict[str, object], wanted: list[Place]) -> bool:
@@ -116,6 +118,8 @@ async def expand(
     recent_days: int,
     seen_urls: set[str],
     today: date | None = None,
+    related: list[str] | None = None,
+    home_country: str | None = None,
 ) -> tuple[list[Candidate], list[Dropped]]:
     today = today or date.today()
     cutoff = today - timedelta(days=recent_days)
@@ -147,11 +151,33 @@ async def expand(
         found_ids = {fr.job_id for fr, _t in d.found_jobs.values() if fr.slug == ref.slug}
         matches: list[Candidate] = []
         for j in jobs:
-            if j.url in seen_urls or not title_matches(j.title, titles):
+            kind = match_kind(j.title, titles, related or [])
+            if j.url in seen_urls or kind is None:
                 continue
             was_found = j.external_id in found_ids
             loc = JobLocation(j.location_text, j.country_code, j.remote)
-            if not any(places().matches(loc, p) for p in wanted):
+            onsite_wanted = [p for p in wanted if p.kind != "remote"]
+            via_remote_only = not any(places().matches(loc, p) for p in onsite_wanted)
+            if (
+                any(p.kind == "remote" for p in wanted)
+                and via_remote_only
+                and not remote_ok_for(
+                    JobLocation(f"{j.location_text} {j.title}", j.country_code, j.remote),
+                    home_country,
+                )
+                # titles often carry the restriction: "... (Anywhere in the U.S.)"
+            ):
+                if was_found or kind == "exact":
+                    dropped.append(
+                        Dropped(
+                            j.title,
+                            j.company,
+                            j.url,
+                            f"remote, but only for another country: {j.location_text}",
+                        )
+                    )
+                continue
+            if not places().matches_any(loc, wanted):
                 if was_found:
                     dropped.append(
                         Dropped(
@@ -172,8 +198,11 @@ async def expand(
                     )
                 )
                 continue
-            matches.append(Candidate(j, len(jobs), newest))
-        matches.sort(key=lambda c: c.job.posted_at or date.min, reverse=True)
+            matches.append(Candidate(j, len(jobs), newest, kind))
+        # exact titles first, then newest
+        matches.sort(
+            key=lambda c: (c.title_match == "exact", c.job.posted_at or date.min), reverse=True
+        )
         shortlist = matches[: MAX_PER_COMPANY + 1]
 
         async def fill(c: Candidate) -> None:

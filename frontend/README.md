@@ -2,7 +2,7 @@
 
 Next.js 16 (App Router, Cache Components), React 19, Tailwind CSS 4, shadcn/ui, Recharts, TanStack Query.
 
-Flow: **login -> onboarding (CV upload/paste -> review) -> first search runs automatically -> matches (skill chart, Learn next, job cards) -> job detail (scores, skills, full post, apply)**, plus New search, History, Settings and the "How it works" judge view.
+Flow: **login -> onboarding (CV upload/paste -> review) -> first search runs automatically -> matches (skill chart, Learn next or add to your CV, job cards) -> job detail (scores, skills, full post, apply)**, plus New search, History, Settings and the "How it works" judge view.
 
 ## Run
 
@@ -33,11 +33,11 @@ The UI needs the backend on `http://localhost:8000`. Start it with `npm run dev:
 
 | Path | What it does |
 |---|---|
-| `src/app/` | Routes: `login`, `(app)/onboarding`, `search/[id]`, `search/[id]/job/[postingId]`, `new-search`, `history`, `settings`, `how/[id]` |
+| `src/app/` | Routes: `login`, `(app)/onboarding`, `profile`, `search/[id]`, `search/[id]/job/[postingId]`, `new-search`, `history`, `settings`, `how/[id]` |
 | `src/features/auth/` | `AuthProvider` (token in localStorage, `/api/me`), `homePath` |
-| `src/features/cv/` | Upload/paste and the review step |
-| `src/features/search/` | Titles and places inputs, `useSearchLive` (stream + cache patching + polling fallback) |
-| `src/features/results/`, `job/` | Progress, job cards, score ring, badges, skill chart, Learn next, post text with highlights |
+| `src/features/cv/` | Upload/paste, the review step, `ProfileCard` (what we read from your CV) |
+| `src/features/search/` | `OpenSearchBox`, titles, places and keywords inputs, `useSearchLive` (stream + cache patching + polling fallback) |
+| `src/features/results/`, `job/` | Progress, job cards, score ring, badges (company score tooltip copy in `src/lib/company.ts`), skill chart, Learn next or add to your CV, post text with highlights |
 | `src/components/ui/` | shadcn/ui components |
 | `src/lib/` | `api/` (one function per endpoint), `sse.ts`, `types.ts` (mirrors `backend/app/schemas/`), `status.ts`, `format.ts` |
 
