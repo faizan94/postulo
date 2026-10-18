@@ -11,6 +11,7 @@ Postulo is a **deep research agent for job seekers**. You upload a CV and Postul
 | **Search** | Tavily `/search` (our own research loop, not `/research`) + Greenhouse, Lever and Ashby public job-board APIs |
 | **Built** | In one day at The Delta Campus hackathon (hosted by Nebius) |
 | **Live demo** | [Open Postulo on Nebius](https://port8080-fg9tkwkgzhnjvga.tunnel.applications.uk-south2.nebius.cloud/login) (sign in with any name) |
+| **Video** | [Watch the walkthrough on Loom](https://www.loom.com/share/0a3cde80cd0c4ca081626120966a5a4d) |
 
 ---
 
