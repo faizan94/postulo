@@ -62,6 +62,11 @@ export default function JobPage() {
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">{data.title}</h1>
+          {data.related_role && (
+            <span className="inline-block rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-200">
+              Related role: same family as the title you searched
+            </span>
+          )}
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-zinc-500">
             <span className="inline-flex items-center gap-1 font-medium text-zinc-700">
               <Building2 className="size-4" aria-hidden />

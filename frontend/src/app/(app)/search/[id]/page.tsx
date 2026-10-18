@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, Info, RotateCw, SearchX, Workflow } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -8,9 +8,11 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FullPageSpinner } from "@/components/FullPageSpinner";
 import { Button } from "@/components/ui/button";
+import { ProfileCard } from "@/features/cv/ProfileCard";
 import { JobCardItem } from "@/features/results/JobCardItem";
 import { LearnNext } from "@/features/results/LearnNext";
 import { ProgressPanel } from "@/features/results/ProgressPanel";
+import { applyFilters, NO_FILTERS, ResultFilters, type Filters } from "@/features/results/ResultFilters";
 import { SkillChart } from "@/features/results/SkillChart";
 import { useSearchLive } from "@/features/search/useSearchLive";
 import { api } from "@/lib/api";
@@ -30,6 +32,14 @@ export default function SearchPage() {
   const router = useRouter();
   const { data, isLoading, error, stage, note } = useSearchLive(id);
   const [sort, setSort] = useState<Sort>("match");
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const cvId = data?.cv_version_id ?? null;
+  const cv = useQuery({
+    queryKey: ["cv-detail", cvId],
+    queryFn: () => api.cvDetail(cvId as number),
+    enabled: cvId !== null,
+    staleTime: 5 * 60_000,
+  });
   const rerun = useMutation({
     mutationFn: () => api.rerun(id),
     onSuccess: ({ search_id }) => router.push(`/search/${search_id}`),
@@ -37,9 +47,9 @@ export default function SearchPage() {
   });
 
   const cards = useMemo(() => {
-    const list = data?.results ?? [];
+    const list = applyFilters(data?.results ?? [], filters);
     return sort === "company" ? [...list].sort(companySort) : list;
-  }, [data?.results, sort]);
+  }, [data?.results, sort, filters]);
 
   if (isLoading) return <FullPageSpinner />;
   if (error || !data)
@@ -57,7 +67,15 @@ export default function SearchPage() {
         <div>
           <p className="text-sm text-zinc-500">{formatDate(data.created_at)}</p>
           <h1 className="text-2xl font-semibold tracking-tight">{data.titles.join(" · ")}</h1>
-          <p className="text-zinc-500">{placesLabel(data.places)}</p>
+          <p className="text-zinc-500">
+            {placesLabel(data.places)}
+            {data.keywords.length > 0 && <span> · {data.keywords.join(", ")}</span>}
+          </p>
+          {data.related_titles.length > 0 && (
+            <p className="mt-1 text-xs text-zinc-400">
+              Also matching related roles: {data.related_titles.slice(0, 5).join(", ")}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => rerun.mutate()} disabled={running || rerun.isPending}>
@@ -69,6 +87,8 @@ export default function SearchPage() {
           </Button>
         </div>
       </div>
+
+      {cv.data?.profile && <ProfileCard profile={cv.data.profile} collapsible />}
 
       {running && <ProgressPanel stage={stage?.stage ?? data.stage} />}
 
@@ -98,11 +118,11 @@ export default function SearchPage() {
         </div>
       )}
 
-      {cards.length > 0 && (
+      {data.results.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold">
-              {running ? "Matches so far" : `${cards.length} open jobs for you`}
+              {running ? "Matches so far" : `${data.results.length} open jobs for you`}
             </h2>
             <div className="inline-flex rounded-lg bg-zinc-100 p-0.5 text-sm" role="group" aria-label="Sort by">
               {(["match", "company"] as Sort[]).map((s) => (
@@ -120,6 +140,17 @@ export default function SearchPage() {
               ))}
             </div>
           </div>
+          <ResultFilters
+            value={filters}
+            onChange={setFilters}
+            shown={cards.length}
+            total={data.results.length}
+          />
+          {cards.length === 0 && (
+            <p className="rounded-xl border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-500">
+              No jobs match these filters.
+            </p>
+          )}
           <div className="space-y-3">
             {cards.map((c, i) => (
               <JobCardItem key={c.posting_id} card={c} rank={i + 1} searchId={id} />
