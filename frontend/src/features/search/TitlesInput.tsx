@@ -3,6 +3,7 @@
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { nameKey } from "@/lib/format";
 
 export const MAX_TITLES = 3;
 
@@ -21,12 +22,12 @@ export function TitlesInput({
 
   function add(title: string) {
     const t = title.trim().replace(/\s+/g, " ");
-    if (!t || full || value.some((v) => v.toLowerCase() === t.toLowerCase())) return;
+    if (!t || full || value.some((v) => nameKey(v) === nameKey(t))) return;
     onChange([...value, t.slice(0, 80)]);
     setDraft("");
   }
 
-  const extra = suggestions.filter((s) => !value.some((v) => v.toLowerCase() === s.toLowerCase()));
+  const extra = suggestions.filter((s) => !value.some((v) => nameKey(v) === nameKey(s)));
 
   return (
     <div className="space-y-2">

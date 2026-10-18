@@ -1,12 +1,15 @@
-"""Phase 1 API shapes. `frontend/src/lib/types.ts` mirrors these; change both together.
-
-The legacy shapes in `app/models/schemas.py` stay until the old /api/cv and /api/jobs routes
-are retired (M1/M2).
-"""
+"""API shapes. `frontend/src/lib/types.ts` mirrors these; change both together."""
 
 from app.schemas.auth import LoginRequest, LoginResponse, MeResponse, SettingsUpdate, User
-from app.schemas.common import Evidence, Place
-from app.schemas.cv import CvConfirm, CvConfirmed, CvDraft, CvVersion, SuggestedSearch
+from app.schemas.common import Evidence, HealthResponse, Place
+from app.schemas.cv import (
+    CvConfirm,
+    CvConfirmed,
+    CvDetail,
+    CvDraft,
+    CvVersion,
+    SuggestedSearch,
+)
 from app.schemas.posting import (
     CompanyScore,
     CompanySource,
@@ -24,6 +27,8 @@ from app.schemas.search import (
     SearchCreate,
     SearchCreated,
     SearchDetail,
+    SearchIntent,
+    SearchParseRequest,
     SearchSummary,
     SkillSummaryItem,
     TraceStep,
@@ -35,11 +40,13 @@ __all__ = [
     "CompanySource",
     "CvConfirm",
     "CvConfirmed",
+    "CvDetail",
     "CvDraft",
     "CvVersion",
     "DroppedPosting",
     "EducationItem",
     "Evidence",
+    "HealthResponse",
     "HowResponse",
     "JobCard",
     "LanguageItem",
@@ -56,6 +63,8 @@ __all__ = [
     "SearchCreate",
     "SearchCreated",
     "SearchDetail",
+    "SearchIntent",
+    "SearchParseRequest",
     "SearchSummary",
     "SettingsUpdate",
     "SkillItem",

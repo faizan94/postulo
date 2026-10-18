@@ -102,15 +102,19 @@ def family(wanted: list[str], limit: int = 8) -> list[str]:
     from app.domain.glossary import glossary  # local: glossary imports nothing from here
 
     g = glossary()
-    wanted_l = {w.lower() for w in wanted}
+
+    def norm(t: str) -> str:
+        return " ".join(tokens(t))
+
+    wanted_keys = {norm(w) for w in wanted}
     out: list[str] = []
     for w in wanted:
-        bases = [w, *g.find_titles(w)]
-        for v in variants(w):
-            bases += g.find_titles(v)
+        # A glossary title is a base when all its normalized tokens are in the wanted title:
+        # 'Sr. AI Eng', 'AI-Engineer' and 'Lead Data & AI Engineer' all reach 'AI Engineer'.
+        bases = [known for known in g.titles if title_matches(w, [known])]
         for base in bases:
             for r in g.related_titles(base):
-                if r.lower() not in wanted_l and r not in out:
+                if norm(r) not in wanted_keys and norm(r) not in {norm(o) for o in out}:
                     out.append(r)
     return out[:limit]
 

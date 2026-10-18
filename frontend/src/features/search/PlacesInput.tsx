@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { api } from "@/lib/api";
+import { nameKey } from "@/lib/format";
 import type { Place } from "@/lib/types";
 
 export const MAX_PLACES = 5;
@@ -20,7 +21,7 @@ export const MAX_PLACES = 5;
 const ICON = { city: Building2, country: Globe2, region: MapIcon, remote: Laptop };
 
 function same(a: Place, b: Place) {
-  return a.kind === b.kind && a.name.toLowerCase() === b.name.toLowerCase();
+  return a.kind === b.kind && nameKey(a.name) === nameKey(b.name);
 }
 
 /**
@@ -37,7 +38,7 @@ export function PlacesInput({ value, onChange }: { value: Place[]; onChange: (p:
   });
   const full = value.length >= MAX_PLACES;
   const typed = q.trim();
-  const exact = data.some((p) => p.name.toLowerCase() === typed.toLowerCase());
+  const exact = data.some((p) => nameKey(p.name) === nameKey(typed));
   const options = data.filter((p) => !value.some((v) => same(v, p)));
 
   function add(p: Place) {

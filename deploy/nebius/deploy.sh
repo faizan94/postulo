@@ -131,13 +131,16 @@ log "Checking .env"
 NEBIUS_API_KEY_VALUE="$(env_get NEBIUS_API_KEY)"
 TAVILY_API_KEY_VALUE="$(env_get TAVILY_API_KEY)"
 MOCK_MODE_VALUE="$(env_get MOCK_MODE | tr '[:upper:]' '[:lower:]')"
-[[ -n "$NEBIUS_API_KEY_VALUE" ]] || die "NEBIUS_API_KEY is empty in $APP_DIR/.env"
-[[ -n "$TAVILY_API_KEY_VALUE" ]] || die "TAVILY_API_KEY is empty in $APP_DIR/.env"
 case "$MOCK_MODE_VALUE" in
   true|false) ;;
   *) die "MOCK_MODE must be set to true or false in $APP_DIR/.env" ;;
 esac
-[[ "$MOCK_MODE_VALUE" == "true" ]] && echo "Warning: MOCK_MODE=true, the app will show fake data."
+if [[ "$MOCK_MODE_VALUE" == "true" ]]; then
+  echo "Warning: MOCK_MODE=true, the app will show fake data (API keys not needed)."
+else
+  [[ -n "$NEBIUS_API_KEY_VALUE" ]] || die "NEBIUS_API_KEY is empty in $APP_DIR/.env (needed when MOCK_MODE=false)"
+  [[ -n "$TAVILY_API_KEY_VALUE" ]] || die "TAVILY_API_KEY is empty in $APP_DIR/.env (needed when MOCK_MODE=false)"
+fi
 
 PUBLIC_URL="${PUBLIC_URL_ARG:-$(env_get PUBLIC_URL)}"
 PUBLIC_URL="${PUBLIC_URL%/}"

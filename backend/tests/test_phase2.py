@@ -124,3 +124,29 @@ def test_clean_text_strips_profile_links():
         "Berlin | linkedin.com/in/some-person-123 | https://www.xing.com/profile/Some_Person"
     )
     assert "linkedin.com/in" not in out and "xing.com/profile" not in out and "Berlin" in out
+
+
+def test_open_search_validation_uses_normalized_names():
+    from app.agents.intent import _validate, parse_rules
+
+    text = "react entwickler in München, Node JS"
+    fallback = parse_rules(text)
+    assert [p.name for p in fallback.places] == ["Munich"]  # München = Munich
+    llm = {
+        "titles": ["React Developer"],
+        "places": ["Munich", "Paris"],
+        "keywords": ["Node.js", "REACT", "Kafka"],
+    }
+    out = _validate(llm, text, fallback)
+    assert [p.name for p in out.places] == ["Munich"]  # Paris was not written: rejected
+    assert out.keywords == [
+        "Node.js",
+        "React",
+    ]  # 'Node JS' = 'Node.js', 'REACT' = 'react'; Kafka not written
+
+
+def test_role_family_lookup_is_spelling_independent():
+    base = set(family(["AI Engineer"]))
+    for spelling in ["Sr. AI Eng", "AI-Engineer", "KI Ingenieur", "Lead Data & AI Engineer"]:
+        assert base <= set(family([spelling], limit=20)), spelling
+    assert "Software Developer" in family(["Softwareentwickler"])

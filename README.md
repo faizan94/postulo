@@ -10,7 +10,7 @@ Sign in with a name, upload your CV (PDF, Word or pasted text) and Postulo runs 
 4. **Match**: Nemotron 3.5 Lightning extracts each job's requirements with verbatim quotes; code checks every quote and computes the **match score** with a fixed formula. A **company score** comes from public hiring signals.
 5. **Learn next**: a skill chart across your matches and Gap ROI, the skill that would lift the most jobs.
 
-If Nemotron is unavailable, grounded rule-based extraction takes over, so the app always works. See [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) for the plan and decision log.
+If Nemotron is unavailable, grounded rule-based extraction takes over, so the app always works. See [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) and [docs/PHASE2_PLAN.md](docs/PHASE2_PLAN.md) for the plan and decision log (Phase 2 wins where they differ).
 
 ## Architecture
 
@@ -20,7 +20,8 @@ Next.js 16 (shadcn/ui, Recharts, TanStack Query)
    v
 FastAPI -- SQLite (users, CV versions, searches, posting + company caches)
    |
-   +- CV intake: pypdf / python-docx / text -> cleaning (no email, phone, birth date) -> review
+   +- CV intake: best of pypdf-layout / pdfium / pypdf, python-docx, text; Nemotron vision for
+   |  scans, photos and broken PDFs -> cleaning (no email, phone, birth date, profile links) -> review
    +- Profile: Nemotron Super VL (quotes verified) + glossary rules
    +- Search run (background task, streamed):
         plan (Nemotron) -> Tavily -> board APIs -> quiet checks -> widen in country (<=3 rounds)
@@ -36,7 +37,7 @@ With `MOCK_MODE=true`, fake Tavily and job boards run under the real pipeline, s
 |---|---|
 | Models | **NVIDIA Nemotron** on **Nebius Token Factory**: `nvidia/Nemotron-3.5-Super-VL` (planning, CV), `nvidia/Nemotron-3_5-Lightning` (requirements) |
 | Web data | **Tavily** `/search` (raw API, `include_published_date`, usage counted, cached) + Greenhouse, Lever, Ashby public job-board APIs |
-| Backend | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2 (async, SQLite), pypdf, python-docx, httpx, **uv** |
+| Backend | Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2 (async, SQLite), pypdf, pypdfium2, Pillow, python-docx, httpx, **uv** |
 | Frontend | Next.js 16 (App Router, Cache Components), React 19, Tailwind CSS 4, shadcn/ui (Radix), Recharts, lucide-react, TanStack Query, sonner |
 | Ops | Docker (non-root, healthchecks, data volume), docker compose |
 
@@ -106,29 +107,32 @@ All variables live in `.env` at the repo root (see [.env.example](.env.example))
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed frontend origins |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 | `MAX_POSTINGS` | `10` | Postings returned per search (1-20) |
-| `NEMOTRON_VISION_MODEL` | `nvidia/Nemotron-3.5-Super-VL` | Vision model for OCR (stretch) |
-| `OCR_ENABLED` | `false` | Accept image/scan CVs (stretch) |
+| `NEMOTRON_VISION_MODEL` | `nvidia/Nemotron-3.5-Super-VL` | Vision model that reads scans, photos and broken PDFs |
+| `OCR_ENABLED` | `true` | Read scans, photos and broken PDFs with Nemotron vision (D19) |
+| `LLM_TIMEOUT_SECONDS` | `120` | Timeout per Nebius call |
+| `LLM_MAX_TOKENS` | `8000` | Max tokens per Nebius call (reasoning tokens count) |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/postulo.db` | SQLite file; folder is created on startup |
 | `MAX_TAVILY_CREDITS_PER_RUN` | `20` | Tavily credit budget per search |
 | `MAX_LLM_CALLS_PER_RUN` | `15` | Nemotron call budget per search (rules take over after) |
 | `RECENT_DAYS` | `45` | Older postings are dropped quietly |
-| `POSTING_RECHECK_HOURS` / `COMPANY_CACHE_DAYS` | `24` / `30` | Cache lifetimes |
+| `POSTING_RECHECK_HOURS` / `COMPANY_CACHE_DAYS` | `24` / `30` | Reserved, not enforced yet (caches use 6 h in memory) |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Backend URL as seen from the browser. It is inlined at frontend build time |
 
 If keys are missing and `MOCK_MODE=false`, the API returns HTTP 503 with `{"error": {"code": "missing_api_key", ...}}`. It does not crash.
 
 ## API
 
-All `/api/*` routes except login and places need `Authorization: Bearer <token>`. Full list and shapes: [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) §5.4 and http://localhost:8000/docs.
+All `/api/*` routes except `/api/auth/login` and `/api/places` need `Authorization: Bearer <token>` (`/api/auth/logout` reads it too). Full list and shapes: [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md) §5.4 and http://localhost:8000/docs.
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | Status, mock mode, keys configured, model IDs |
 | `POST` | `/api/auth/login` · `/api/auth/logout` | Name-only login, token |
 | `GET` / `PUT` / `DELETE` | `/api/me`, `/api/me/settings` | Current user, search defaults, delete my data |
-| `GET` | `/api/places?q=` | Fixed places list (city, country, Remote) |
-| `POST` / `PUT` / `GET` / `DELETE` | `/api/cv`, `/api/cv/{id}` | Upload or paste, review and confirm, list, delete CV versions |
-| `POST` / `GET` | `/api/searches`, `/api/searches/{id}` | Start a search, history, detail (safe to reload) |
+| `GET` | `/api/places?q=` | Places list (city, country, region, Remote); any typed place is accepted |
+| `POST` / `PUT` / `GET` / `DELETE` | `/api/cv`, `/api/cv/{id}` | Upload or paste, review and confirm, list, one version with its profile, delete |
+| `POST` / `GET` | `/api/searches`, `/api/searches/{id}` | Start a search (titles, optional places and keywords), history, detail (safe to reload) |
+| `POST` | `/api/searches/parse` | Free text -> titles, places, keywords (open search) |
 | `GET` | `/api/searches/{id}/events` | Live stream (`text/event-stream`, snapshot first) |
 | `POST` | `/api/searches/{id}/rerun` | Same inputs, fresh checks |
 | `GET` | `/api/postings/{id}?search_id=` | Job detail: full post, apply link, match breakdown, company score |
@@ -150,17 +154,16 @@ postulo/
 │   └── services/            llm.py, tavily_client.py, ats.py (Greenhouse/Lever/Ashby),
 │                            html_text.py, intake/ (PDF, docx, text, cleaning), fakes.py (mock)
 ├── frontend/src/
-│   ├── app/                 login, (app)/onboarding, search/[id], search/[id]/job/[postingId],
+│   ├── app/                 login, (app)/onboarding, profile, search/[id], search/[id]/job/[postingId],
 │   │                        new-search, history, settings, how/[id]
 │   ├── components/ui/       shadcn/ui (Radix)
 │   ├── features/            auth, cv, search, results, job, shell
 │   └── lib/                 api/, sse.ts, types.ts, status.ts, format.ts
-└── docs/PHASE1_PLAN.md      the plan and decision log
+└── docs/                   PHASE1_PLAN.md, PHASE2_PLAN.md (plans and decision log)
 ```
 
 ## Where to extend
 
-- **Scanned CVs / photos (stretch)**: `NEMOTRON_VISION_MODEL` + `OCR_ENABLED`; add `services/intake/ocr.py`.
 - **More job boards**: add a parser in `backend/app/services/ats.py` and its domain to `ATS_DOMAINS`.
 - **Company news signal (stretch)**: Tavily `topic=news` in `agents/` + `scoring/company_score.py`.
 - **Skills**: aliases and related groups live in `backend/app/domain/data/glossary.json`.
@@ -169,6 +172,8 @@ postulo/
 ## Docs
 
 - [docs/PHASE1_PLAN.md](docs/PHASE1_PLAN.md): Phase 1 plan, decisions, scoring formulas.
+- [docs/PHASE2_PLAN.md](docs/PHASE2_PLAN.md): Phase 2 fixes and decisions (wins where it differs from Phase 1).
+- [deploy/nebius/README.md](deploy/nebius/README.md): deploy backend + frontend on one Nebius VM.
 - [docs/reference-ai-agent-orchestrator.md](docs/reference-ai-agent-orchestrator.md): what we took from `mathcrypto/ai-agent-orchestrator`, and why.
 
 ## Team

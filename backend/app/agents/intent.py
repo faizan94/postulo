@@ -9,8 +9,9 @@ import re
 from app.agents.llm_gate import LLMGate
 from app.agents.prompts.intent import INTENT_SYSTEM_PROMPT
 from app.config import Settings
-from app.domain.evidence import normalize
 from app.domain.glossary import glossary
+from app.domain.normalize import fold
+from app.domain.normalize import key as norm_key
 from app.domain.places import places
 from app.schemas.common import Place
 from app.schemas.search import SearchIntent
@@ -91,8 +92,19 @@ def parse_rules(text: str) -> SearchIntent:
     return SearchIntent(titles=titles, places=found_places[:5], keywords=keywords, by_ai=False)
 
 
+def _window_keys(text: str, size: int = 3) -> set[str]:
+    """Comparison keys of every 1-3 word window: 'Node JS' -> 'nodejs' (domain/normalize.py)."""
+    words = re.findall(r"[\w.+#/-]+", text)
+    return {
+        norm_key(" ".join(words[i : i + n]))
+        for n in range(1, size + 1)
+        for i in range(len(words) - n + 1)
+    }
+
+
 def _validate(data: dict[str, object], text: str, fallback: SearchIntent) -> SearchIntent:
-    norm = normalize(text)
+    folded = fold(text)
+    text_keys = _window_keys(text)
     raw_titles = data.get("titles") or []
     titles = [str(t).strip()[:60] for t in raw_titles if str(t).strip()]  # type: ignore[attr-defined]
     resolved: list[Place] = []
@@ -101,16 +113,15 @@ def _validate(data: dict[str, object], text: str, fallback: SearchIntent) -> Sea
         if not name:
             continue
         p = places().resolve(name)
-        # only places the user wrote (by name or alias) are accepted
-        written = normalize(name) in norm or any(
-            normalize(fp.name) == normalize(p.name) for fp in fallback.places
-        )
+        # Only places the user wrote are accepted. Comparison uses the normalized form, so the
+        # LLM's "Munich" counts when the user typed "München"/"Muenchen" (rules found it).
+        written = fold(name) in folded or p in fallback.places
         if written and p not in resolved:
             resolved.append(p)
     keywords = []
     for raw in data.get("keywords") or []:  # type: ignore[attr-defined]
         k = str(raw).strip()
-        if k and normalize(k) in norm:
+        if k and (norm_key(k) in text_keys or fold(k) in folded):
             keywords.append(glossary().canonical(k)[:40])
     return SearchIntent(
         titles=titles[:3] or fallback.titles,

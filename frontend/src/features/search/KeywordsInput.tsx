@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { nameKey } from "@/lib/format";
 
 export const MAX_KEYWORDS = 5;
 
@@ -13,7 +14,7 @@ export function KeywordsInput({ value, onChange }: { value: string[]; onChange: 
 
   function add(raw: string) {
     const k = raw.trim().replace(/\s+/g, " ").slice(0, 40);
-    if (!k || full || value.some((v) => v.toLowerCase() === k.toLowerCase())) return;
+    if (!k || full || value.some((v) => nameKey(v) === nameKey(k))) return;
     onChange([...value, k]);
     setDraft("");
   }
