@@ -51,11 +51,12 @@ export function CvReview({
           {w}
         </p>
       ))}
+      {/* Readable sans text; grows with the CV but stays capped so the buttons stay in reach. */}
       <Textarea
-        rows={14}
+        rows={20}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        className="font-mono text-xs leading-relaxed"
+        className="max-h-[65vh] min-h-80 overflow-y-auto px-4 py-3 leading-relaxed text-zinc-800"
         aria-label="Extracted CV text"
       />
       {error && <p className="text-sm text-rose-600">{error}</p>}
